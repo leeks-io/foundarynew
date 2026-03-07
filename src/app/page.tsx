@@ -1,65 +1,87 @@
-import Image from "next/image";
+import Hero from "@/components/home/Hero"
+import BuilderCard from "@/components/social/BuilderCard"
+import ServiceCard from "@/components/marketplace/ServiceCard"
+import StartupCard from "@/components/marketplace/StartupCard"
 
 export default function Home() {
+  const trendingBuilders = [
+    { name: "Alex Rivera", role: "Fullstack Developer", score: 942, isPremium: true },
+    { name: "Sarah Chen", role: "UI/UX Designer", score: 885, isPremium: false },
+    { name: "Marcus Thorne", role: "Smart Contract Engineer", score: 910, isPremium: true },
+    { name: "Elena Vogt", role: "AI Research Engineer", score: 867, isPremium: false },
+  ]
+
+  const featuredServices = [
+    { title: "High-end Web3 Landing Page Design", provider: "Rivera Studio", price: 450, rating: 5.0, deliveryTime: 7 },
+    { title: "ERC-721 Smart Contract Audit", provider: "Thorne Security", price: 1200, rating: 4.9, deliveryTime: 3 },
+    { title: "Custom AI Agent Integration", provider: "Nexus AI", price: 800, rating: 5.0, deliveryTime: 5 },
+  ]
+
+  const startupPreview = [
+    { name: "AI Resume Builder", revenue: 4200, users: 8500, price: 45000 },
+    { name: "SaaS Dev Tools", revenue: 12500, users: 3200, price: 185000 },
+  ]
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main className="min-h-screen pb-32">
+      <Hero />
+
+      {/* Trending Builders Section */}
+      <section className="max-w-7xl mx-auto px-6 py-20">
+        <div className="flex items-center justify-between mb-12">
+          <div>
+            <h2 className="text-3xl font-bold mb-2">Trending Builders</h2>
+            <p className="text-white/40 text-sm">Top ranked builders currently active on the network.</p>
+          </div>
+          <button className="px-6 py-2 rounded-full border border-white/10 hover:bg-white/5 transition-colors text-sm font-semibold">
+            View Leaderboard
+          </button>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {trendingBuilders.map((builder) => (
+            <BuilderCard key={builder.name} {...builder} />
+          ))}
         </div>
-      </main>
-    </div>
-  );
+      </section>
+
+      {/* Featured Services Section */}
+      <section className="max-w-7xl mx-auto px-6 py-24 bg-primary/5 rounded-[4rem]">
+        <div className="flex items-center justify-between mb-12">
+          <div>
+            <h2 className="text-3xl font-bold mb-2">Featured Services</h2>
+            <p className="text-white/40 text-sm">Premium digital services from verified freelancers.</p>
+          </div>
+          <button className="text-primary text-sm font-semibold hover:underline">Browse Marketplace</button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {featuredServices.map((service) => (
+            <ServiceCard key={service.title} {...service} />
+          ))}
+        </div>
+      </section>
+
+      {/* Startup Marketplace Section */}
+      <section className="max-w-7xl mx-auto px-6 py-32">
+        <div className="flex items-center justify-between mb-16">
+          <div>
+            <h2 className="text-4xl font-bold mb-3 tracking-tight">Startup Marketplace</h2>
+            <p className="text-white/40 text-lg">Acquire pre-revenue and profitable internet businesses.</p>
+          </div>
+          <button className="px-8 py-3 bg-white/5 text-white rounded-full font-bold border border-white/10 hover:bg-white/10 transition-all">
+            Browse All Startups
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {startupPreview.map((startup) => (
+            <StartupCard key={startup.name} {...startup} />
+          ))}
+        </div>
+      </section>
+    </main>
+  )
 }
+
+
