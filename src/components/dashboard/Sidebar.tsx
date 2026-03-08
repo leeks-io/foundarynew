@@ -48,14 +48,15 @@ export default function Sidebar() {
     const navItems = [...commonNav, ...roleNav[role]]
 
     return (
-        <aside className="fixed left-0 top-0 bottom-0 w-64 bg-[#0B1221] border-r border-white/5 flex flex-col z-30">
+        <aside className="fixed left-0 top-0 bottom-0 w-64 bg-[#0B1221]/40 backdrop-blur-xl border-r border-white/5 flex flex-col z-30">
             <div className="p-6">
-                <Link href="/" className="flex items-center gap-2 mb-10">
-                    <div className="p-1.5 bg-primary rounded-lg">
+                <Link href="/" className="flex items-center gap-2 mb-10 group">
+                    <div className="p-1.5 bg-primary rounded-lg glow-primary group-hover:scale-105 transition-transform">
                         <Rocket className="w-5 h-5 text-white" />
                     </div>
                     <span className="text-lg font-bold tracking-tight">Foundry</span>
                 </Link>
+
 
                 <nav className="space-y-1">
                     {navItems.map((item) => {

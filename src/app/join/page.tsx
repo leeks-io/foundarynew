@@ -38,11 +38,16 @@ export default function Onboarding() {
     ]
 
     return (
-        <div className="min-h-screen pt-32 pb-20 px-6 bg-[#0B0F19]">
-            <div className="max-w-4xl mx-auto text-center mb-16">
-                <h1 className="text-4xl md:text-5xl font-bold mb-4">How do you want to use Foundry?</h1>
-                <p className="text-white/40">Choose the role that best fits your goals. You can switch anytime in settings.</p>
+        <div className="min-h-screen pt-48 pb-20 px-6">
+            <div className="max-w-4xl mx-auto text-center mb-20">
+                <h1 className="text-5xl md:text-7xl font-black italic uppercase tracking-tighter mb-6">
+                    Choose Your <span className="text-primary">Path</span>
+                </h1>
+                <p className="text-white/40 font-medium text-lg max-w-xl mx-auto">
+                    Adapt the Foundry UI to your current objective. Switch roles anytime in settings.
+                </p>
             </div>
+
 
             <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
                 {roles.map((role) => (
