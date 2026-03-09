@@ -10,83 +10,46 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
-import { createClient } from '@/utils/supabase/client'
+import { createClient } from '@/lib/supabase/client'
 import { formatDistanceToNow } from 'date-fns'
 import SocialPost from '@/components/dashboard/SocialPost'
+import { useAuth } from '@/hooks/useAuth'
+import { useFeed } from '@/hooks/useFeed'
+import { useJobs } from '@/hooks/useJobs'
+import { useFounderStats, useJobSeekerStats, useFreelancerStats } from '@/hooks/useDashboard'
+import { createPost } from '@/lib/queries/feed'
+import { PostSkeleton } from '@/components/skeletons/PostSkeleton'
+import { SidebarSkeleton } from '@/components/skeletons/SidebarSkeleton'
+import { JobsSkeleton } from '@/components/skeletons/JobsSkeleton'
 
 export default function DashboardPage() {
     const [activeTab, setActiveTab] = useState('foryou')
-    const [posts, setPosts] = useState<any[]>([])
-    const [trendingBuilders, setTrendingBuilders] = useState<any[]>([])
-    const [activeJobs, setActiveJobs] = useState<any[]>([])
-    const [loading, setLoading] = useState(true)
     const [newPostContent, setNewPostContent] = useState('')
     const [isPosting, setIsPosting] = useState(false)
-    const [currentUser, setCurrentUser] = useState<any>(null)
+    const { user: currentUser } = useAuth()
 
-    const supabase = createClient()
+    const { data: posts, isLoading: postsLoading } = useFeed()
+    const { data: jobs, isLoading: jobsLoading } = useJobs()
+    const { data: founderStats } = useFounderStats()
+    const { data: dashboardSeeker } = useJobSeekerStats()
 
-    useEffect(() => {
-        const fetchData = async () => {
-            setLoading(true)
-            const { data: { user } } = await supabase.auth.getUser()
-            setCurrentUser(user)
-
-            // Fetch Posts
-            const { data: postsData } = await supabase
-                .from('posts')
-                .select('*, users(username, role, is_premium, profiles(profile_image))')
-                .order('created_at', { ascending: false })
-                .limit(20)
-
-            // Fetch Trending Builders
-            const { data: buildersData } = await supabase
-                .from('users')
-                .select('username, builder_score, profiles(profile_image)')
-                .order('builder_score', { ascending: false })
-                .limit(3)
-
-            // Fetch Active Jobs
-            const { data: jobsData } = await supabase
-                .from('jobs')
-                .select('title, budget, created_at')
-                .eq('status', 'open')
-                .limit(2)
-
-            if (postsData) setPosts(postsData)
-            if (buildersData) setTrendingBuilders(buildersData)
-            if (jobsData) setActiveJobs(jobsData)
-            setLoading(false)
-        }
-
-        fetchData()
-    }, [supabase])
+    // We can filter posts based on activeTab if needed, but for now we follow useFeed
+    const displayPosts = posts || []
 
     const handlePostSubmit = async () => {
         if (!newPostContent.trim() || !currentUser) return
         setIsPosting(true)
 
-        const { data, error } = await supabase
-            .from('posts')
-            .insert({
-                user_id: currentUser.id,
-                content: newPostContent,
-                post_type: 'update'
-            })
-            .select('*, users(username, role, is_premium, profiles(profile_image))')
-            .single()
-
-        if (!error && data) {
-            setPosts([data, ...posts])
+        try {
+            await createPost(currentUser.id, newPostContent)
             setNewPostContent('')
+        } catch (error) {
+            console.error(error)
+        } finally {
+            setIsPosting(false)
         }
-        setIsPosting(false)
     }
 
-    // Fallback display logic for empty states
-    const displayPosts = posts.length > 0 ? posts : [
-        { id: 1, content: "Welcome to Foundry! Start by posting what you're building today. 🚀", created_at: new Date().toISOString(), likes_count: 5, replies_count: 2, users: { username: "Foundry", role: "Official", is_premium: true } }
-    ]
 
     return (
         <>
@@ -135,12 +98,15 @@ export default function DashboardPage() {
                     </div>
                 </div>
 
-                {/* Feed Posts */}
                 <div className="divide-y divide-[#1a1a1a]">
-                    {loading ? (
-                        <div className="p-8 text-center text-[#6b7280]">Loading feed...</div>
+                    {postsLoading ? (
+                        <>
+                            <PostSkeleton />
+                            <PostSkeleton />
+                            <PostSkeleton />
+                        </>
                     ) : (
-                        displayPosts.map((post) => (
+                        displayPosts.length > 0 ? displayPosts.map((post: any) => (
                             <SocialPost
                                 key={post.id}
                                 name={post.users?.username || 'Anonymous'}
@@ -153,7 +119,13 @@ export default function DashboardPage() {
                                 avatar={post.users?.profiles?.profile_image || `https://i.pravatar.cc/150?u=${post.user_id}`}
                                 isPremium={post.users?.is_premium}
                             />
-                        ))
+                        )) : (
+                            <div className="p-12 text-center">
+                                <Sparkles className="mx-auto mb-4 text-[#6b7280] opacity-20" size={48} />
+                                <p className="text-[#6b7280] font-bold">Your feed is empty.</p>
+                                <p className="text-xs text-[#6b7280]/60 mt-2">Follow builders or post an update to get started.</p>
+                            </div>
+                        )
                     )}
                 </div>
             </div>
@@ -182,35 +154,43 @@ export default function DashboardPage() {
                     </div>
                 </div>
 
-                {/* Trending Builders */}
                 <div className="bg-[#0d0d0d] border border-[#1a1a1a] rounded-2xl p-4">
                     <h3 className="text-xl font-bold mb-4">Trending Builders</h3>
                     <div className="space-y-4">
-                        {trendingBuilders.map((builder) => (
-                            <TrendingUser
-                                key={builder.username}
-                                name={builder.username}
-                                handle={`@${builder.username}`}
-                                score={builder.builder_score}
-                                img={builder.profiles?.profile_image || `https://i.pravatar.cc/150?u=${builder.username}`}
-                            />
-                        ))}
+                        {postsLoading ? (
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-3 animate-pulse">
+                                    <div className="w-10 h-10 rounded-full bg-[#1a1a1a]" />
+                                    <div className="h-4 bg-[#1a1a1a] rounded w-1/2" />
+                                </div>
+                                <div className="flex items-center gap-3 animate-pulse">
+                                    <div className="w-10 h-10 rounded-full bg-[#1a1a1a]" />
+                                    <div className="h-4 bg-[#1a1a1a] rounded w-2/3" />
+                                </div>
+                            </div>
+                        ) : (
+                            <p className="text-xs text-[#6b7280] py-2">No trending builders today.</p>
+                        )}
                     </div>
-                    <button className="w-full mt-4 text-[#07da63] text-sm font-bold hover:underline py-2">
-                        Show more
-                    </button>
                 </div>
 
                 {/* Active Jobs */}
                 <div className="bg-[#0d0d0d] border border-[#1a1a1a] rounded-2xl p-4">
                     <h3 className="text-xl font-bold mb-4">Active Jobs</h3>
                     <div className="space-y-4">
-                        {activeJobs.map((job) => (
+                        {jobsLoading ? (
+                            <div className="space-y-2 animate-pulse">
+                                <div className="h-4 bg-[#1a1a1a] rounded w-full" />
+                                <div className="h-3 bg-[#1a1a1a] rounded w-2/3" />
+                            </div>
+                        ) : jobs && jobs.length > 0 ? jobs.map((job: any) => (
                             <div key={job.title} className="group cursor-pointer">
                                 <p className="font-bold text-[15px] group-hover:underline">{job.title}</p>
                                 <p className="text-[#6b7280] text-sm">${job.budget}/mo</p>
                             </div>
-                        ))}
+                        )) : (
+                            <p className="text-xs text-[#6b7280] py-2">No active jobs found.</p>
+                        )}
                     </div>
                 </div>
 

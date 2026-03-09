@@ -9,62 +9,30 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
-import { createClient } from '@/utils/supabase/client'
 import { formatDistanceToNow } from 'date-fns'
+import { useAuth } from '@/hooks/useAuth'
+import { useJobs } from '@/hooks/useJobs'
+import { useJobSeekerStats } from '@/hooks/useDashboard'
+import { JobsSkeleton } from '@/components/skeletons/JobsSkeleton'
+import { EmptyJobs } from '@/components/empty/EmptyJobs'
+import { createClient } from '@/lib/supabase/client'
 
 export default function JobsPage() {
     const [searchQuery, setSearchQuery] = useState('')
     const [activeFilter, setActiveFilter] = useState('All')
     const [showLimitModal, setShowLimitModal] = useState(false)
-    const [applicationCount, setApplicationCount] = useState(0)
-    const [jobs, setJobs] = useState<any[]>([])
-    const [topFounders, setTopFounders] = useState<any[]>([])
-    const [loading, setLoading] = useState(true)
-    const [currentUser, setCurrentUser] = useState<any>(null)
-
-    const supabase = createClient()
+    const { user: currentUser } = useAuth()
+    const { data: jobs, isLoading: jobsLoading } = useJobs({
+        search: searchQuery,
+        type: activeFilter
+    })
+    const { data: seekerStats } = useJobSeekerStats()
+    const applicationCount = seekerStats?.applications || 0
     const DAILY_LIMIT = 2
+    const supabase = createClient()
 
-    useEffect(() => {
-        const fetchData = async () => {
-            setLoading(true)
-            const { data: { user } } = await supabase.auth.getUser()
-            setCurrentUser(user)
-
-            if (user) {
-                // Fetch user's application count for today
-                const today = new Date()
-                today.setHours(0, 0, 0, 0)
-                const { count } = await supabase
-                    .from('applications')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('applicant_id', user.id)
-                    .gte('applied_at', today.toISOString())
-
-                setApplicationCount(count || 0)
-            }
-
-            // Fetch Jobs
-            const { data: jobsData } = await supabase
-                .from('jobs')
-                .select('*, users:founder_id(username, profiles(profile_image))')
-                .eq('status', 'open')
-                .order('created_at', { ascending: false })
-
-            // Fetch Top Hiring Founders (mocking with user scores for now as we don't have deep hiring stats)
-            const { data: foundersData } = await supabase
-                .from('users')
-                .select('username, builder_score, profiles(profile_image)')
-                .order('builder_score', { ascending: false })
-                .limit(3)
-
-            if (jobsData) setJobs(jobsData)
-            if (foundersData) setTopFounders(foundersData)
-            setLoading(false)
-        }
-
-        fetchData()
-    }, [supabase])
+    // We can use a simple query for top founders here as well
+    const { data: topFounders } = useJobs()
 
     const handleApply = async (jobId: string) => {
         if (!currentUser) return // Should redirect to auth or show message
@@ -81,7 +49,6 @@ export default function JobsPage() {
                 })
 
             if (!error) {
-                setApplicationCount(prev => prev + 1)
                 alert("Application sent successfully!")
             } else if (error.code === '23505') {
                 alert("You have already applied for this job.")
@@ -93,10 +60,6 @@ export default function JobsPage() {
 
     const filters = ['All', 'Remote', 'Full-time', 'Part-time', 'Contract', 'Web3', 'AI', 'Design', 'Dev']
 
-    // Fallback jobs if DB is empty
-    const displayJobs = jobs.length > 0 ? jobs : [
-        { id: '1', title: 'Lead Frontend Engineer', company_name: 'Nexus AI', username: 'nexus', job_type: 'fulltime', budget: 5000, is_remote: true, created_at: new Date().toISOString() }
-    ]
 
     return (
         <div className="flex flex-1 min-w-0">
@@ -141,16 +104,17 @@ export default function JobsPage() {
                     </div>
                 </div>
 
-                {/* Job Listings */}
                 <div className="divide-y divide-[#1a1a1a]">
-                    {loading ? (
-                        <div className="p-8 text-center text-[#6b7280]">Loading jobs...</div>
+                    {jobsLoading ? (
+                        <div className="p-4">
+                            <JobsSkeleton />
+                        </div>
                     ) : (
-                        displayJobs.map(job => (
+                        jobs && jobs.length > 0 ? jobs.map((job: any) => (
                             <div key={job.id} className="p-5 hover:bg-[#080808] transition-colors group cursor-pointer flex gap-4">
                                 <div className="w-12 h-12 rounded-xl bg-[#111111] border border-[#1a1a1a] flex items-center justify-center font-bold text-xl text-[#07da63] shrink-0 overflow-hidden">
-                                    {(job.users as any)?.profiles?.profile_image ? (
-                                        <img src={(job.users as any).profiles.profile_image} className="w-full h-full object-cover" alt="Logo" />
+                                    {job.users?.profiles?.profile_image ? (
+                                        <img src={job.users.profiles.profile_image} className="w-full h-full object-cover" alt="Logo" />
                                     ) : (
                                         job.company_name?.[0] || '⬡'
                                     )}
@@ -159,7 +123,7 @@ export default function JobsPage() {
                                     <div className="flex justify-between items-start mb-1">
                                         <div>
                                             <h3 className="font-bold text-lg group-hover:underline">{job.title}</h3>
-                                            <p className="text-[#6b7280] text-sm font-medium">{job.company_name} @{(job.users as any)?.username || 'anon'}</p>
+                                            <p className="text-[#6b7280] text-sm font-medium">{job.company_name} @{job.users?.username || 'anon'}</p>
                                         </div>
                                         <button className="text-[#6b7280] hover:text-[#07da63] transition-colors p-2 rounded-full hover:bg-[#07da63]/10">
                                             <Bookmark size={18} />
@@ -183,7 +147,9 @@ export default function JobsPage() {
                                     </div>
                                 </div>
                             </div>
-                        ))
+                        )) : (
+                            <EmptyJobs />
+                        )
                     )}
                 </div>
             </div>
@@ -228,7 +194,7 @@ export default function JobsPage() {
                 <div className="bg-[#0d0d0d] border border-[#1a1a1a] rounded-2xl p-4">
                     <h3 className="text-xl font-bold mb-4">Top Hiring Founders</h3>
                     <div className="space-y-4">
-                        {topFounders.map(founder => (
+                        {topFounders.length > 0 ? topFounders.map(founder => (
                             <FounderItem
                                 key={founder.username}
                                 name={founder.username}
@@ -236,7 +202,9 @@ export default function JobsPage() {
                                 hires={Math.floor(founder.builder_score / 100)}
                                 img={founder.profiles?.profile_image || `https://i.pravatar.cc/150?u=${founder.username}`}
                             />
-                        ))}
+                        )) : (
+                            <p className="text-xs text-[#6b7280] py-2">No hiring data yet.</p>
+                        )}
                     </div>
                 </div>
             </aside>

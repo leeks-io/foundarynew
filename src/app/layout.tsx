@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { Inter, DM_Sans, Space_Grotesk } from "next/font/google"
 import "./globals.css"
 import { RoleProvider } from "@/context/RoleContext"
+import { Providers } from "@/app/providers"
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
 const dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-dm-sans" })
@@ -20,9 +21,11 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className={`${inter.variable} ${dmSans.variable} ${spaceGrotesk.variable} font-sans antialiased selection:bg-[#07da63]/30 bg-black text-white`}>
-        <RoleProvider>
-          {children}
-        </RoleProvider>
+        <Providers>
+          <RoleProvider>
+            {children}
+          </RoleProvider>
+        </Providers>
       </body>
     </html>
   )

@@ -9,7 +9,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
-import { createClient } from '@/utils/supabase/client'
+import { createClient } from '@/lib/supabase/client'
 import SocialPost from '@/components/dashboard/SocialPost'
 import ServiceCard from '@/components/marketplace/ServiceCard'
 import StartupCard from '@/components/marketplace/StartupCard'

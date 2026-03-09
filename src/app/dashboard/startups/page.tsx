@@ -9,17 +9,21 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import StartupCard from '@/components/marketplace/StartupCard'
+import { useAuth } from '@/hooks/useAuth'
+import { useStartups } from '@/hooks/useStartups'
+import { useBlueprints } from '@/hooks/useBlueprints'
+import { useBuilders } from '@/hooks/useBuilders'
+import { createStartup } from '@/lib/queries/startups'
+import { createClient } from '@/lib/supabase/client'
+
 import Link from 'next/link'
-import { createClient } from '@/utils/supabase/client'
 
 export default function StartupHub() {
     const [activeTab, setActiveTab] = useState('marketplace')
-    const [isPremium, setIsPremium] = useState(false)
-    const [startups, setStartups] = useState<any[]>([])
-    const [blueprints, setBlueprints] = useState<any[]>([])
-    const [cofounders, setCofounders] = useState<any[]>([])
-    const [loading, setLoading] = useState(true)
-    const [currentUser, setCurrentUser] = useState<any>(null)
+    const { user: currentUser } = useAuth()
+    const { data: startups, isLoading: startupsLoading } = useStartups()
+    const { data: blueprints, isLoading: blueprintsLoading } = useBlueprints()
+    const { data: cofounders, isLoading: buildersLoading } = useBuilders()
 
     // Form states
     const [startupName, setStartupName] = useState('')
@@ -29,71 +33,31 @@ export default function StartupHub() {
     const [stage, setStage] = useState('Idea')
     const [isPosting, setIsPosting] = useState(false)
 
+    const isPremium = currentUser?.is_premium || false
     const supabase = createClient()
-
-    useEffect(() => {
-        const fetchData = async () => {
-            setLoading(true)
-            const { data: { user } } = await supabase.auth.getUser()
-            setCurrentUser(user)
-            if (user?.user_metadata?.is_premium) {
-                setIsPremium(true)
-            }
-
-            // Fetch Startups
-            const { data: startupsData } = await supabase
-                .from('startups')
-                .select('*')
-                .order('created_at', { ascending: false })
-
-            // Fetch Blueprints
-            const { data: blueprintsData } = await supabase
-                .from('blueprints')
-                .select('*')
-                .order('created_at', { ascending: false })
-
-            // Fetch Cofounders (users with builder profile)
-            const { data: usersData } = await supabase
-                .from('users')
-                .select('username, role, builder_score, profiles(profile_image), skills')
-                .limit(6)
-
-            if (startupsData) setStartups(startupsData)
-            if (blueprintsData) setBlueprints(blueprintsData)
-            if (usersData) setCofounders(usersData)
-            setLoading(false)
-        }
-
-        fetchData()
-    }, [supabase])
 
     const handlePostStartup = async () => {
         if (!startupName || !currentUser) return
         setIsPosting(true)
 
-        const { error } = await supabase
-            .from('startups')
-            .insert({
-                user_id: currentUser.id,
+        try {
+            await createStartup(currentUser.id, {
                 name: startupName,
                 tagline,
                 description,
                 industry,
                 stage,
                 metrics: { users: 0, revenue: 0 },
-                price_usdc: 0 // Default or handle in form
+                price_usdc: 0
             })
-
-        if (!error) {
             alert("Startup posted successfully!")
             setActiveTab('marketplace')
-            // Refresh startups
-            const { data } = await supabase.from('startups').select('*').order('created_at', { ascending: false })
-            if (data) setStartups(data)
-        } else {
+            // React Query will re-fetch if we invalidate or just rely on its cache logic
+        } catch (error: any) {
             alert("Error posting startup: " + error.message)
+        } finally {
+            setIsPosting(false)
         }
-        setIsPosting(false)
     }
 
     const tabs = [
@@ -103,10 +67,6 @@ export default function StartupHub() {
         { id: 'blueprints', label: 'Blueprints' },
     ]
 
-    // Fallback if DB empty
-    const displayStartups = startups.length > 0 ? startups : [
-        { name: "AI Resume Builder", revenue: 4200, users: 8500, price: 45000, industry: "AI · SaaS" }
-    ]
 
     return (
         <div className="flex flex-col flex-1 min-w-0">
@@ -159,24 +119,38 @@ export default function StartupHub() {
 
                                     {/* Blurred content background for effect */}
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-12 opacity-20 filter blur-sm grayscale pointer-events-none select-none">
-                                        {startups.map(s => <StartupCard key={s.name} {...s} />)}
+                                        {startups && startups.length > 0 ? (
+                                            startups.slice(0, 3).map((s: any) => <StartupCard key={s.name} {...s} />)
+                                        ) : (
+                                            <div className="col-span-3 h-40 bg-white/5 rounded-3xl" />
+                                        )}
                                     </div>
                                 </div>
                             )}
 
                             {isPremium && (
                                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
-                                    {displayStartups.map((startup, idx) => (
-                                        <StartupCard
-                                            key={startup.id || idx}
-                                            name={startup.name}
-                                            revenue={startup.metrics?.revenue || 0}
-                                            users={startup.metrics?.users || 0}
-                                            price={startup.price_usdc}
-                                            industry={startup.industry}
-                                            logo={startup.logo_url}
-                                        />
-                                    ))}
+                                    {startupsLoading ? (
+                                        <div className="col-span-3 py-20 text-center text-[#6b7280]">Loading marketplace...</div>
+                                    ) : startups && startups.length > 0 ? (
+                                        startups.map((startup: any, idx: number) => (
+                                            <StartupCard
+                                                key={startup.id || idx}
+                                                name={startup.name}
+                                                revenue={startup.metrics?.revenue || 0}
+                                                users={startup.metrics?.users || 0}
+                                                price={startup.price_usdc}
+                                                industry={startup.industry}
+                                                logo={startup.logo_url}
+                                            />
+                                        ))
+                                    ) : (
+                                        <div className="col-span-3 py-20 text-center">
+                                            <Rocket className="mx-auto mb-4 text-[#6b7280] opacity-20" size={60} />
+                                            <h3 className="text-white font-bold text-xl mb-2">Marketplace is empty</h3>
+                                            <p className="text-[#6b7280] max-w-xs mx-auto">No startups are currently listed for sale. Be the first to list yours!</p>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </motion.div>
@@ -276,7 +250,7 @@ export default function StartupHub() {
                             exit={{ opacity: 0, y: -10 }}
                             className="space-y-6"
                         >
-                            {blueprints.length > 0 ? blueprints.map(bp => (
+                            {blueprints.length > 0 ? blueprints.map((bp: any) => (
                                 <div key={bp.id} className="bg-[#0d0d0d] border border-[#1a1a1a] border-l-4 border-l-[#07da63] p-8 rounded-r-[2.5rem] group hover:bg-[#111111] transition-all">
                                     <div className="flex justify-between items-start mb-4">
                                         <div>
@@ -322,27 +296,31 @@ export default function StartupHub() {
                             exit={{ opacity: 0, y: -10 }}
                             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
                         >
-                            {cofounders.map(cf => (
-                                <div key={cf.username} className="bg-[#0d0d0d] border border-[#1a1a1a] p-6 rounded-[2rem] group hover:border-[#07da63]/30 transition-all">
-                                    <div className="flex flex-col items-center text-center">
-                                        <div className="w-20 h-20 rounded-full border-2 border-[#1a1a1a] p-1 mb-4 group-hover:border-[#07da63] transition-all">
-                                            <img src={(cf.profiles as any)?.profile_image || `https://i.pravatar.cc/150?u=${cf.username}`} className="w-full h-full rounded-full object-cover" alt="Profile" />
+                            {cofounders.length > 0 ? (
+                                cofounders.map((cf: any) => (
+                                    <div key={cf.username} className="bg-[#0d0d0d] border border-[#1a1a1a] p-6 rounded-[2rem] group hover:border-[#07da63]/30 transition-all">
+                                        <div className="flex flex-col items-center text-center">
+                                            <div className="w-20 h-20 rounded-full border-2 border-[#1a1a1a] p-1 mb-4 group-hover:border-[#07da63] transition-all">
+                                                <img src={(cf.profiles as any)?.profile_image || `https://i.pravatar.cc/150?u=${cf.username}`} className="w-full h-full rounded-full object-cover" alt="Profile" />
+                                            </div>
+                                            <h3 className="font-bold text-lg flex items-center gap-1.5">
+                                                {cf.username} <CheckCircle2 size={16} className="text-[#07da63]" />
+                                            </h3>
+                                            <p className="text-[#6b7280] text-sm font-medium mb-6">{cf.role}</p>
+                                            <div className="flex flex-wrap justify-center gap-2 mb-8 px-2">
+                                                {cf.skills?.slice(0, 3).map((s: string) => (
+                                                    <span key={s} className="px-2 py-0.5 bg-black border border-[#1a1a1a] rounded text-[10px] font-bold text-[#6b7280]">{s}</span>
+                                                ))}
+                                            </div>
+                                            <Link href={`/dashboard/builder/${cf.username}`} className="w-full bg-[#07da63] text-black font-bold py-2.5 rounded-xl text-sm hover:bg-[#08f26e] transition-colors text-center">
+                                                View Profile
+                                            </Link>
                                         </div>
-                                        <h3 className="font-bold text-lg flex items-center gap-1.5">
-                                            {cf.username} <CheckCircle2 size={16} className="text-[#07da63]" />
-                                        </h3>
-                                        <p className="text-[#6b7280] text-sm font-medium mb-6">{cf.role}</p>
-                                        <div className="flex flex-wrap justify-center gap-2 mb-8 px-2">
-                                            {cf.skills?.slice(0, 3).map((s: string) => (
-                                                <span key={s} className="px-2 py-0.5 bg-black border border-[#1a1a1a] rounded text-[10px] font-bold text-[#6b7280]">{s}</span>
-                                            ))}
-                                        </div>
-                                        <Link href={`/dashboard/builder/${cf.username}`} className="w-full bg-[#07da63] text-black font-bold py-2.5 rounded-xl text-sm hover:bg-[#08f26e] transition-colors text-center">
-                                            View Profile
-                                        </Link>
                                     </div>
-                                </div>
-                            ))}
+                                ))
+                            ) : (
+                                <div className="col-span-3 py-20 text-center text-[#6b7280]">No builders found yet.</div>
+                            )}
                         </motion.div>
                     )}
                 </AnimatePresence>

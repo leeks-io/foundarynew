@@ -9,66 +9,19 @@ import {
 import { cn } from '@/lib/utils'
 import ServiceCard from '@/components/marketplace/ServiceCard'
 import Link from 'next/link'
-import { createClient } from '@/utils/supabase/client'
+import { useServices } from '@/hooks/useServices'
+import { ServiceSkeleton } from '@/components/skeletons/ServiceSkeleton'
 
 export default function ServicesPage() {
     const [selectedService, setSelectedService] = useState<any>(null)
     const [activeCategory, setActiveCategory] = useState('All')
-    const [services, setServices] = useState<any[]>([])
-    const [trendingServices, setTrendingServices] = useState<any[]>([])
-    const [topFreelancers, setTopFreelancers] = useState<any[]>([])
-    const [loading, setLoading] = useState(true)
-    const [searchQuery, setSearchQuery] = useState('')
-
-    const supabase = createClient()
     const categories = ['All', 'UI/UX Design', 'Web Dev', 'Smart Contracts', 'AI Tools', 'Marketing', 'Branding']
+    const { data: services, isLoading: servicesLoading } = useServices(activeCategory)
 
-    useEffect(() => {
-        const fetchData = async () => {
-            setLoading(true)
+    // We can filter for trending separately or just use the first few of the feed
+    const trendingServices = services?.slice(0, 3) || []
+    const topFreelancers: any[] = [] // Still mockup or separate query if needed
 
-            // Fetch Services
-            let query = supabase
-                .from('services')
-                .select('*, users(username, is_premium, profiles(profile_image))')
-                .eq('is_active', true)
-                .order('created_at', { ascending: false })
-
-            if (activeCategory !== 'All') {
-                query = query.eq('category', activeCategory)
-            }
-
-            const { data: servicesData } = await query
-
-            // Fetch Trending Services (mocking with rating for now)
-            const { data: trendingData } = await supabase
-                .from('services')
-                .select('title, price_usdc')
-                .eq('is_active', true)
-                .order('rating', { ascending: false })
-                .limit(3)
-
-            // Fetch Top Freelancers
-            const { data: freelancersData } = await supabase
-                .from('users')
-                .select('username, builder_score, profiles(profile_image)')
-                .eq('role', 'Talent')
-                .order('builder_score', { ascending: false })
-                .limit(2)
-
-            if (servicesData) setServices(servicesData)
-            if (trendingData) setTrendingServices(trendingData)
-            if (freelancersData) setTopFreelancers(freelancersData)
-            setLoading(false)
-        }
-
-        fetchData()
-    }, [supabase, activeCategory])
-
-    // Fallback if DB empty
-    const displayServices = services.length > 0 ? services : [
-        { id: '1', title: "High-end Web3 Landing Page Design", price_usdc: 450, rating: 5.0, delivery_days: 7, users: { username: "Rivera Studio", is_premium: true } }
-    ]
 
     return (
         <div className="flex flex-1 min-w-0">
@@ -124,26 +77,36 @@ export default function ServicesPage() {
                     <p className="text-[#6b7280] text-xs font-medium">428 services found</p>
                 </div>
 
-                {/* Services Grid */}
                 <div className="p-4">
-                    {loading ? (
-                        <div className="p-8 text-center text-[#6b7280]">Loading services...</div>
-                    ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                            {displayServices.map(service => (
+                    {servicesLoading ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {Array(4).fill(0).map((_: any, idx: number) => <ServiceSkeleton key={idx} />)}
+                        </div>
+                    ) : services && services.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-20">
+                            {services.map((ts: any) => (
                                 <ServiceCard
-                                    key={service.id}
-                                    title={service.title}
-                                    provider={(service.users as any)?.username || "Unknown"}
-                                    price={service.price_usdc}
-                                    rating={service.rating || 5.0}
-                                    deliveryTime={service.delivery_days || 7}
-                                    image={service.images?.[0]}
-                                    avatar={(service.users as any)?.profiles?.profile_image}
-                                    isPremium={(service.users as any)?.is_premium}
-                                    onClick={() => setSelectedService(service)}
+                                    key={ts.id}
+                                    title={ts.title}
+                                    provider={ts.users?.username || "Unknown"}
+                                    price={ts.price_usdc}
+                                    rating={ts.rating || 5.0}
+                                    deliveryTime={ts.delivery_days || 7}
+                                    image={ts.images?.[0]}
+                                    avatar={ts.users?.profiles?.profile_image}
+                                    isPremium={ts.users?.is_premium}
+                                    onClick={() => setSelectedService(ts)}
                                 />
                             ))}
+                        </div>
+                    ) : (
+                        <div className="p-20 text-center">
+                            <Sparkles className="mx-auto mb-4 text-[#6b7280] opacity-20" size={60} />
+                            <h3 className="text-white font-bold text-xl mb-2">No services found</h3>
+                            <p className="text-[#6b7280] max-w-xs mx-auto">Either there are no services in this category, or none have been posted yet. Be the first to list a service!</p>
+                            <button className="mt-8 bg-[#07da63] text-black font-bold px-8 py-3 rounded-full hover:bg-[#08f26e] transition-all">
+                                List Your Service
+                            </button>
                         </div>
                     )}
                 </div>
@@ -154,7 +117,7 @@ export default function ServicesPage() {
                 <div className="bg-[#0d0d0d] border border-[#1a1a1a] rounded-2xl p-4">
                     <h3 className="text-xl font-bold mb-4">Trending Services</h3>
                     <div className="space-y-4">
-                        {trendingServices.map(ts => (
+                        {trendingServices.slice(0, 4).map((ts: any) => (
                             <TrendingService key={ts.title} title={ts.title} price={`${ts.price_usdc} USDC`} />
                         ))}
                     </div>
@@ -163,7 +126,7 @@ export default function ServicesPage() {
                 <div className="bg-[#0d0d0d] border border-[#1a1a1a] rounded-2xl p-4">
                     <h3 className="text-xl font-bold mb-4">Top Rated Freelancers</h3>
                     <div className="space-y-4">
-                        {topFreelancers.map(tf => (
+                        {topFreelancers.length > 0 ? topFreelancers.map(tf => (
                             <FreelancerItem
                                 key={tf.username}
                                 name={tf.username}
@@ -171,7 +134,9 @@ export default function ServicesPage() {
                                 rating="5.0"
                                 img={tf.profiles?.profile_image || `https://i.pravatar.cc/150?u=${tf.username}`}
                             />
-                        ))}
+                        )) : (
+                            <p className="text-xs text-[#6b7280] py-2">No ratings yet.</p>
+                        )}
                     </div>
                 </div>
             </aside>
@@ -279,7 +244,7 @@ export default function ServicesPage() {
                     </div>
                 )}
             </AnimatePresence>
-        </div>
+        </div >
     )
 }
 

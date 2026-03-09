@@ -9,15 +9,27 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
+import { useAuth } from '@/hooks/useAuth'
+import { useMessages, useConversations, useSendMessage } from '@/hooks/useMessages'
+import { formatDistanceToNow } from 'date-fns'
 
 export default function MessagesPage() {
     const [selectedChat, setSelectedChat] = useState<any>(null)
+    const [newMessage, setNewMessage] = useState('')
+    const { user: currentUser } = useAuth()
+    const { data: conversations, isLoading: convosLoading } = useConversations()
+    const { data: messages, isLoading: msgsLoading } = useMessages(selectedChat?.id)
+    const sendMessage = useSendMessage()
 
-    const chats = [
-        { id: 1, name: 'Alex Rivera', handle: '@alex', lastMsg: 'I just reviewed the smart contract logic.', time: '2m', unread: true, img: 'https://i.pravatar.cc/150?u=alex' },
-        { id: 2, name: 'Sarah Chen', handle: '@sarah', lastMsg: 'The Figma prototype is ready for review!', time: '1h', img: 'https://i.pravatar.cc/150?u=sarah' },
-        { id: 3, name: 'Elena Vogt', handle: '@elena', lastMsg: 'Deal Proposal: Landing Page Design', time: '3h', isDeal: true, img: 'https://i.pravatar.cc/150?u=elena' },
-    ]
+    const handleSend = async () => {
+        if (!newMessage.trim() || !selectedChat) return
+        try {
+            await sendMessage(selectedChat.id, newMessage)
+            setNewMessage('')
+        } catch (e) {
+            console.error(e)
+        }
+    }
 
     return (
         <div className="flex h-[calc(100vh-60px)] overflow-hidden">
@@ -46,31 +58,34 @@ export default function MessagesPage() {
                 </div>
 
                 <div className="flex-1 overflow-y-auto no-scrollbar">
-                    {chats.map(chat => (
-                        <div
-                            key={chat.id}
-                            onClick={() => setSelectedChat(chat)}
-                            className={cn(
-                                "px-4 py-4 flex gap-3 cursor-pointer hover:bg-[#080808] transition-colors relative",
-                                selectedChat?.id === chat.id ? "bg-[#080808] border-r-2 border-[#07da63]" : ""
-                            )}
-                        >
-                            <div className="relative shrink-0">
-                                <img src={chat.img} alt={chat.name} className="w-12 h-12 rounded-full" />
-                                {chat.unread && <div className="absolute top-0 right-0 w-3 h-3 bg-[#07da63] border-2 border-black rounded-full" />}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <div className="flex justify-between items-baseline">
-                                    <h4 className="font-bold text-[15px] truncate">{chat.name}</h4>
-                                    <span className="text-[#6b7280] text-xs pb-1">{chat.time}</span>
+                    {convosLoading ? (
+                        <div className="p-8 text-center text-[#6b7280] animate-pulse">Loading chats...</div>
+                    ) : (
+                        conversations?.map((chat: any) => (
+                            <div
+                                key={chat.id}
+                                onClick={() => setSelectedChat(chat)}
+                                className={cn(
+                                    "px-4 py-4 flex gap-3 cursor-pointer hover:bg-[#080808] transition-colors relative",
+                                    selectedChat?.id === chat.id ? "bg-[#080808] border-r-2 border-[#07da63]" : ""
+                                )}
+                            >
+                                <div className="relative shrink-0">
+                                    <img src={chat.profiles?.profile_image || `https://i.pravatar.cc/150?u=${chat.username}`} alt={chat.username} className="w-12 h-12 rounded-full" />
+                                    {chat.unread && <div className="absolute top-0 right-0 w-3 h-3 bg-[#07da63] border-2 border-black rounded-full" />}
                                 </div>
-                                <p className="text-[#6b7280] text-sm truncate font-medium">
-                                    {chat.isDeal && <span className="text-[#07da63] font-bold">Deal · </span>}
-                                    {chat.lastMsg}
-                                </p>
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex justify-between items-baseline">
+                                        <h4 className="font-bold text-[15px] truncate">{chat.username}</h4>
+                                        <span className="text-[#6b7280] text-xs pb-1">{formatDistanceToNow(new Date(chat.time), { addSuffix: true })}</span>
+                                    </div>
+                                    <p className="text-[#6b7280] text-sm truncate font-medium">
+                                        {chat.lastMsg}
+                                    </p>
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        ))
+                    )}
                 </div>
             </div>
 
@@ -111,42 +126,18 @@ export default function MessagesPage() {
                         {/* Message Thread */}
                         <div className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
                             <div className="flex flex-col items-center py-8 border-b border-[#1a1a1a] mb-8">
-                                <img src={selectedChat.img} className="w-16 h-16 rounded-full mb-3" />
-                                <h4 className="font-bold text-xl">{selectedChat.name}</h4>
-                                <p className="text-[#6b7280] text-sm mb-4">{selectedChat.handle}</p>
-                                <p className="text-[#6b7280] text-xs font-medium bg-[#111111] px-3 py-1 rounded-lg border border-[#1a1a1a]">Joined March 2024</p>
+                                <img src={selectedChat.profiles?.profile_image || `https://i.pravatar.cc/150?u=${selectedChat.username}`} className="w-16 h-16 rounded-full mb-3" />
+                                <h4 className="font-bold text-xl">{selectedChat.username}</h4>
+                                <p className="text-[#6b7280] text-sm mb-4">@{selectedChat.username}</p>
                             </div>
 
-                            {/* Samples */}
-                            <Message bubble="Hi David! I saw your recent post about the AI Resume Builder." />
-                            <Message bubble="Which technologies are you using for the backend?" />
-                            <Message bubble="I'm using Node.js with Supabase for the database and authentication. Looking into Vercel for deployment." isMe />
-                            <Message bubble="That's a solid stack! I've sent you a deal proposal for the UI design phase." />
-
-                            {/* Deal Card */}
-                            <div className="max-w-[320px] bg-[#0d0d0d] border border-[#07da63]/30 rounded-2xl overflow-hidden mt-6">
-                                <div className="p-4 bg-gradient-to-br from-[#07da63]/10 to-transparent">
-                                    <div className="flex items-center gap-2 mb-2 text-[#07da63]">
-                                        <Zap size={16} className="fill-current" />
-                                        <span className="text-[10px] font-bold uppercase tracking-widest">Deal Proposal</span>
-                                    </div>
-                                    <h4 className="font-bold mb-1">Landing Page Design</h4>
-                                    <p className="text-[#6b7280] text-xs font-medium mb-4">Complete Figma prototype + Assets.</p>
-
-                                    <div className="flex items-center justify-between mb-4">
-                                        <span className="text-xl font-bold text-white">250 USDC</span>
-                                        <span className="text-[10px] font-bold text-[#6b7280] uppercase">7 Day Delivery</span>
-                                    </div>
-
-                                    <button className="w-full bg-[#07da63] text-black font-bold py-2 rounded-xl text-xs hover:bg-[#08f26e] transition-colors flex items-center justify-center gap-2 group">
-                                        Accept Deal <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-                                    </button>
-                                </div>
-                                <div className="p-3 bg-black border-t border-[#1a1a1a] flex items-center gap-2">
-                                    <ShieldCheck size={14} className="text-[#07da63]" />
-                                    <span className="text-[10px] font-bold text-[#6b7280] uppercase">Escrow Protection Enabled</span>
-                                </div>
-                            </div>
+                            {msgsLoading ? (
+                                <div className="p-8 text-center text-[#6b7280]">Loading messages...</div>
+                            ) : (
+                                messages?.map((msg: any) => (
+                                    <Message key={msg.id} bubble={msg.content} isMe={msg.sender_id === currentUser?.id} />
+                                ))
+                            )}
                         </div>
 
                         {/* Input Bar */}
@@ -160,10 +151,16 @@ export default function MessagesPage() {
                                     placeholder="Start a new message"
                                     className="flex-1 bg-transparent border-none focus:outline-none py-2 px-3 text-[15px] max-h-32 resize-none no-scrollbar font-medium"
                                     rows={1}
+                                    value={newMessage}
+                                    onChange={(e) => setNewMessage(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())}
                                 />
                                 <div className="flex gap-1 pb-1">
                                     <IconButton icon={<Smile size={20} />} />
-                                    <button className="p-2 text-[#07da63] hover:bg-[#07da63]/10 rounded-full transition-colors">
+                                    <button
+                                        onClick={handleSend}
+                                        className="p-2 text-[#07da63] hover:bg-[#07da63]/10 rounded-full transition-colors"
+                                    >
                                         <Send size={20} />
                                     </button>
                                 </div>

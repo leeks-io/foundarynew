@@ -76,24 +76,16 @@ export default function Home() {
     fetchData()
   }, [supabase])
 
-  // Fallback if no data yet (don't show empty sections if loading or no results)
-  const displayBuilders = trendingBuilders.length > 0 ? trendingBuilders : [
-    { name: "Alex Rivera", role: "Fullstack Developer", score: 942, img: "https://i.pravatar.cc/150?u=alex" },
-    { name: "Sarah Chen", role: "UI/UX Designer", score: 885, img: "https://i.pravatar.cc/150?u=sarah" },
-    { name: "Marcus Thorne", role: "Smart Contract Engineer", score: 910, img: "https://i.pravatar.cc/150?u=marcus" },
-    { name: "Elena Vogt", role: "AI Research Engineer", score: 867, img: "https://i.pravatar.cc/150?u=elena" },
-  ]
-
-  const displayServices = featuredServices.length > 0 ? featuredServices : [
-    { title: "High-end Web3 Landing Page Design", provider: "Rivera Studio", price: 450, rating: 5.0, img: "https://i.pravatar.cc/150?u=1" },
-    { title: "ERC-721 Smart Contract Audit", provider: "Thorne Security", price: 1200, rating: 4.9, img: "https://i.pravatar.cc/150?u=2" },
-    { title: "Custom AI Agent Integration", provider: "Nexus AI", price: 800, rating: 5.0, img: "https://i.pravatar.cc/150?u=3" },
-  ]
-
-  const displayBlueprints = blueprints.length > 0 ? blueprints : [
-    { title: "AI Voice Note Summarizer", tags: ["SaaS", "AI"], price: "50 USDC" },
-    { title: "On-chain Escrow for Freelancers", tags: ["DeFi", "Web3"], price: "Free" },
-  ]
+  if (loading) {
+    return (
+      <div className="bg-black text-white min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="text-[#07da63] text-4xl animate-pulse">⬡</div>
+          <p className="text-[#6b7280] text-sm font-bold uppercase tracking-widest">Loading Foundry...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="bg-black text-white min-h-screen selection:bg-[#07da63]/30">
@@ -146,30 +138,35 @@ export default function Home() {
       {/* Trending Builders */}
       <section className="py-20 px-6 border-b border-[#1a1a1a]">
         <div className="max-w-[1200px] mx-auto">
-          <div className="flex items-center justify-between mb-10">
-            <h2 className="text-2xl font-bold">Trending Builders</h2>
-            <Link href="/dashboard/explore" className="text-[#07da63] text-sm font-bold hover:underline">View all</Link>
-          </div>
-
-          <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
-            {displayBuilders.map((builder) => (
-              <div key={builder.name} className="min-w-[280px] bg-[#0d0d0d] border border-[#1a1a1a] p-5 rounded-2xl flex flex-col items-center text-center group hover:border-[#07da63]/30 transition-all">
-                <div className="w-20 h-20 rounded-full border-2 border-[#1a1a1a] p-1 mb-4 group-hover:border-[#07da63] transition-all overflow-hidden">
-                  <img src={builder.img} alt={builder.name} className="w-full h-full rounded-full object-cover" />
+          <h2 className="text-2xl font-bold mb-10">Trending Builders</h2>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            {trendingBuilders.length > 0 ? trendingBuilders.map((builder, index) => (
+              <motion.div
+                key={builder.name}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+                viewport={{ once: true }}
+                className="bg-[#0d0d0d] border border-[#1a1a1a] p-6 rounded-2xl hover:border-[#07da63]/30 transition-all group"
+              >
+                <div className="flex flex-col items-center text-center">
+                  <div className="w-20 h-20 rounded-full border-2 border-[#07da63]/20 p-1 mb-4 group-hover:border-[#07da63] transition-colors">
+                    <img src={builder.img} alt={builder.name} className="w-full h-full rounded-full object-cover" />
+                  </div>
+                  <h3 className="font-bold text-lg mb-1 flex items-center gap-1">
+                    {builder.name}
+                    <CheckCircle2 size={14} className="text-[#07da63]" />
+                  </h3>
+                  <p className="text-[#6b7280] text-sm mb-4 font-medium">{builder.role || 'Foundry Builder'}</p>
+                  <div className="bg-[#1a1a1a] rounded-lg px-4 py-2 w-full">
+                    <span className="text-[#07da63] font-black text-xl">{builder.score}</span>
+                    <span className="text-[10px] text-[#6b7280] font-black uppercase tracking-widest block">Builder Score</span>
+                  </div>
                 </div>
-                <h3 className="font-bold text-lg mb-1 flex items-center gap-1">
-                  {builder.name} <CheckCircle2 size={16} className="text-[#07da63]" />
-                </h3>
-                <p className="text-[#6b7280] text-sm mb-4 font-medium">{builder.role}</p>
-                <div className="flex items-center gap-2 mb-6">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-[#6b7280]">Score</span>
-                  <span className="text-sm font-bold text-[#07da63]">{builder.score}</span>
-                </div>
-                <button className="w-full py-2 bg-white text-black rounded-lg font-bold text-sm hover:opacity-90 transition-opacity">
-                  Follow
-                </button>
-              </div>
-            ))}
+              </motion.div>
+            )) : (
+              <p className="col-span-4 text-center py-10 text-[#6b7280] font-bold">No trending builders yet.</p>
+            )}
           </div>
         </div>
       </section>
@@ -178,21 +175,23 @@ export default function Home() {
       <section className="py-20 px-6 border-b border-[#1a1a1a]">
         <div className="max-w-[1200px] mx-auto">
           <h2 className="text-2xl font-bold mb-10">Services</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {displayServices.map((service) => (
-              <div key={service.title} className="bg-[#0d0d0d] border border-[#1a1a1a] rounded-2xl overflow-hidden group hover:border-[#07da63] transition-all">
-                <div className="h-48 bg-[#111111] relative overflow-hidden">
-                  <img src={`https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=800&q=80&u=${service.title}`} alt={service.title} className="w-full h-full object-cover opacity-50 transition-transform group-hover:scale-110" />
-                  <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[#0d0d0d] to-transparent" />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {featuredServices.length > 0 ? featuredServices.map((service) => (
+              <div key={service.title} className="bg-[#0d0d0d] border border-[#1a1a1a] rounded-2xl overflow-hidden group hover:border-[#07da63]/30 transition-all">
+                <div className="aspect-[4/3] bg-[#1a1a1a] relative">
+                  <img src={service.img} alt={service.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  <div className="absolute top-4 left-4 flex gap-2">
+                    <span className="bg-[#07da63] text-black text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded">Featured</span>
+                  </div>
                 </div>
                 <div className="p-5">
-                  <div className="flex items-center gap-2 mb-3">
-                    <img src={service.img} alt={service.provider} className="w-6 h-6 rounded-full" />
-                    <span className="text-sm text-[#6b7280] font-medium">{service.provider}</span>
+                  <h3 className="font-bold text-lg mb-2 line-clamp-2 leading-snug group-hover:text-[#07da63] transition-colors">{service.title}</h3>
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-6 h-6 rounded-full bg-[#1a1a1a]" />
+                    <span className="text-sm text-[#6b7280] font-medium">by <span className="text-white">@{service.provider}</span></span>
                   </div>
-                  <h3 className="font-bold text-[16px] mb-4 leading-snug">{service.title}</h3>
-                  <div className="flex items-center justify-between pt-4 border-t border-[#1a1a1a]">
-                    <div className="flex items-center gap-1">
+                  <div className="pt-4 border-t border-[#1a1a1a] flex items-center justify-between">
+                    <div className="flex items-center gap-1 text-[#07da63]">
                       <Star size={14} className="text-[#07da63] fill-[#07da63]" />
                       <span className="text-sm font-bold">{service.rating}</span>
                     </div>
@@ -203,7 +202,9 @@ export default function Home() {
                   </div>
                 </div>
               </div>
-            ))}
+            )) : (
+              <p className="col-span-3 text-center py-10 text-[#6b7280] font-bold">No services featured yet.</p>
+            )}
           </div>
         </div>
       </section>
@@ -213,7 +214,7 @@ export default function Home() {
         <div className="max-w-[1200px] mx-auto">
           <h2 className="text-2xl font-bold mb-10">Blueprint Ideas</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {displayBlueprints.map((idea) => (
+            {blueprints.length > 0 ? blueprints.map((idea) => (
               <div key={idea.title} className="bg-[#0d0d0d] border border-[#1a1a1a] border-l-4 border-l-[#07da63] p-6 rounded-r-2xl">
                 <h3 className="text-xl font-bold mb-3">{idea.title}</h3>
                 <div className="flex gap-2 mb-6">
@@ -228,7 +229,9 @@ export default function Home() {
                   <button className="flex-1 border border-[#1a1a1a] text-white py-2 rounded-lg font-bold text-xs hover:bg-white/5 transition-all">Discuss</button>
                 </div>
               </div>
-            ))}
+            )) : (
+              <p className="col-span-2 text-center py-10 text-[#6b7280] font-bold">No blueprints available yet.</p>
+            )}
           </div>
         </div>
       </section>
