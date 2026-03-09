@@ -27,3 +27,6 @@ export async function createSupabaseServerClient() {
         }
     )
 }
+
+// Alias — keeps all existing API routes working without changes
+export const createClient = createSupabaseServerClient
