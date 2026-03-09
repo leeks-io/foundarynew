@@ -6,9 +6,82 @@ import { CheckCircle2, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 
-export default function AuthPage({ searchParams }: { searchParams: { mode?: string } }) {
+export default function AuthPage({ searchParams }: { searchParams: { mode?: string, error?: string } }) {
     const [view, setView] = useState<'login' | 'signup'>(searchParams.mode === 'signup' ? 'signup' : 'login')
-    const [role, setRole] = useState<'talent' | 'freelancer' | 'founder'>('freelancer')
+    const [role, setRole] = useState<'jobseeker' | 'freelancer' | 'founder'>('freelancer')
+
+    // Auth State
+    const [email, setEmail] = useState('')
+    const [password, setPassword] = useState('')
+    const [fullName, setFullName] = useState('')
+    const [loading, setLoading] = useState(false)
+    const [error, setError] = useState<string | null>(searchParams.error ? 'Authentication failed. Please try again.' : null)
+    const [successMessage, setSuccessMessage] = useState<string | null>(null)
+
+    const handleGoogleLogin = async () => {
+        setLoading(true)
+        setError(null)
+        const { createClient } = await import('@/utils/supabase/client')
+        const supabase = createClient()
+        const { error } = await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+                redirectTo: `${window.location.origin}/auth/callback`,
+            },
+        })
+        if (error) setError(error.message)
+        setLoading(false)
+    }
+
+    const handleSignIn = async (e: React.FormEvent) => {
+        e.preventDefault()
+        setLoading(true)
+        setError(null)
+        const { createClient } = await import('@/utils/supabase/client')
+        const supabase = createClient()
+
+        const { error } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+        })
+
+        if (error) {
+            setError(error.message)
+        } else {
+            window.location.href = '/dashboard'
+        }
+        setLoading(false)
+    }
+
+    const handleSignUp = async (e: React.FormEvent) => {
+        e.preventDefault()
+        setLoading(true)
+        setError(null)
+        setSuccessMessage(null)
+
+        const { createClient } = await import('@/utils/supabase/client')
+        const supabase = createClient()
+
+        // Include full name and role in user metadata
+        const { error } = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+                data: {
+                    full_name: fullName,
+                    role: role
+                },
+                emailRedirectTo: `${window.location.origin}/auth/callback`,
+            }
+        })
+
+        if (error) {
+            setError(error.message)
+        } else {
+            setSuccessMessage("Check your email for the confirmation link!")
+        }
+        setLoading(false)
+    }
 
     return (
         <div className="min-h-screen bg-black flex items-center justify-center p-6 relative">
@@ -35,8 +108,14 @@ export default function AuthPage({ searchParams }: { searchParams: { mode?: stri
                         >
                             <h1 className="text-3xl font-bold text-white mb-8">Sign in to Foundry</h1>
 
+                            {error && <div className="p-3 mb-4 bg-red-500/10 border border-red-500/20 text-red-500 text-sm rounded-lg">{error}</div>}
+
                             <div className="space-y-4">
-                                <button className="w-full bg-white text-black font-bold h-11 rounded-lg flex items-center justify-center gap-2 hover:bg-white/90 transition-colors">
+                                <button
+                                    onClick={handleGoogleLogin}
+                                    disabled={loading}
+                                    className="w-full bg-white text-black font-bold h-11 rounded-lg flex items-center justify-center gap-2 hover:bg-white/90 transition-colors disabled:opacity-50"
+                                >
                                     <svg className="w-5 h-5" viewBox="0 0 24 24">
                                         <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
                                         <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
@@ -56,26 +135,35 @@ export default function AuthPage({ searchParams }: { searchParams: { mode?: stri
                                     <div className="h-px bg-[#1a1a1a] flex-1" />
                                 </div>
 
-                                <div className="space-y-4">
+                                <form onSubmit={handleSignIn} className="space-y-4">
                                     <div className="group">
                                         <input
-                                            type="text"
+                                            type="email"
                                             placeholder="Email"
-                                            className="w-full h-11 bg-black border border-[#1a1a1a] rounded-lg px-4 text-white focus:border-[#07da63] focus:outline-none transition-colors"
+                                            value={email}
+                                            onChange={(e) => setEmail(e.target.value)}
+                                            required
+                                            className="w-full h-11 bg-black border border-[#1a1a1a] rounded-lg px-4 text-white focus:border-[#07da63] focus:outline-none transition-colors shadow-none outline-none ring-0 focus:ring-0"
                                         />
                                     </div>
                                     <div className="group">
                                         <input
                                             type="password"
                                             placeholder="Password"
-                                            className="w-full h-11 bg-black border border-[#1a1a1a] rounded-lg px-4 text-white focus:border-[#07da63] focus:outline-none transition-colors"
+                                            value={password}
+                                            onChange={(e) => setPassword(e.target.value)}
+                                            required
+                                            className="w-full h-11 bg-black border border-[#1a1a1a] rounded-lg px-4 text-white focus:border-[#07da63] focus:outline-none transition-colors shadow-none outline-none ring-0 focus:ring-0"
                                         />
                                     </div>
-                                </div>
-
-                                <button className="w-full bg-[#07da63] text-black font-bold h-11 rounded-full mt-4 hover:bg-[#08f26e] transition-colors">
-                                    Next
-                                </button>
+                                    <button
+                                        type="submit"
+                                        disabled={loading}
+                                        className="w-full bg-[#07da63] text-black font-bold h-11 rounded-full mt-4 hover:bg-[#08f26e] transition-colors disabled:opacity-50"
+                                    >
+                                        {loading ? 'Signing in...' : 'Next'}
+                                    </button>
+                                </form>
 
                                 <p className="text-[#6b7280] text-xs mt-4">
                                     Forgot password?
@@ -95,25 +183,56 @@ export default function AuthPage({ searchParams }: { searchParams: { mode?: stri
                         >
                             <h1 className="text-3xl font-bold text-white mb-8">Create your account</h1>
 
+                            {error && <div className="p-3 mb-4 bg-red-500/10 border border-red-500/20 text-red-500 text-sm rounded-lg">{error}</div>}
+                            {successMessage && <div className="p-3 mb-4 bg-[#07da63]/10 border border-[#07da63]/20 text-[#07da63] text-sm rounded-lg">{successMessage}</div>}
+
                             <div className="space-y-4">
-                                <div className="space-y-3">
-                                    <input type="text" placeholder="Full name" className="w-full h-11 bg-black border border-[#1a1a1a] rounded-lg px-4 text-white focus:border-[#07da63] focus:outline-none" />
-                                    <input type="email" placeholder="Email" className="w-full h-11 bg-black border border-[#1a1a1a] rounded-lg px-4 text-white focus:border-[#07da63] focus:outline-none" />
-                                    <input type="password" placeholder="Password" className="w-full h-11 bg-black border border-[#1a1a1a] rounded-lg px-4 text-white focus:border-[#07da63] focus:outline-none" />
-                                </div>
-
-                                <div className="pt-2">
-                                    <p className="text-sm font-bold text-[#6b7280] mb-3">Select your role:</p>
-                                    <div className="flex gap-2">
-                                        <RoleChip label="🎯 Talent" active={role === 'talent'} onClick={() => setRole('talent')} />
-                                        <RoleChip label="💼 Freelancer" active={role === 'freelancer'} onClick={() => setRole('freelancer')} />
-                                        <RoleChip label="🚀 Founder" active={role === 'founder'} onClick={() => setRole('founder')} />
+                                <form onSubmit={handleSignUp} className="space-y-4">
+                                    <div className="space-y-3">
+                                        <input
+                                            type="text"
+                                            placeholder="Full name"
+                                            value={fullName}
+                                            onChange={(e) => setFullName(e.target.value)}
+                                            required
+                                            className="w-full h-11 bg-black border border-[#1a1a1a] rounded-lg px-4 text-white focus:border-[#07da63] focus:outline-none shadow-none outline-none ring-0 focus:ring-0"
+                                        />
+                                        <input
+                                            type="email"
+                                            placeholder="Email"
+                                            value={email}
+                                            onChange={(e) => setEmail(e.target.value)}
+                                            required
+                                            className="w-full h-11 bg-black border border-[#1a1a1a] rounded-lg px-4 text-white focus:border-[#07da63] focus:outline-none shadow-none outline-none ring-0 focus:ring-0"
+                                        />
+                                        <input
+                                            type="password"
+                                            placeholder="Password (min 6 chars)"
+                                            value={password}
+                                            onChange={(e) => setPassword(e.target.value)}
+                                            required
+                                            minLength={6}
+                                            className="w-full h-11 bg-black border border-[#1a1a1a] rounded-lg px-4 text-white focus:border-[#07da63] focus:outline-none shadow-none outline-none ring-0 focus:ring-0"
+                                        />
                                     </div>
-                                </div>
 
-                                <button className="w-full bg-[#07da63] text-black font-bold h-11 rounded-full mt-6 hover:bg-[#08f26e] transition-colors">
-                                    Create Account
-                                </button>
+                                    <div className="pt-2">
+                                        <p className="text-sm font-bold text-[#6b7280] mb-3">Select your role:</p>
+                                        <div className="flex gap-2">
+                                            <RoleChip label="🎯 Job Seeker" active={role === 'jobseeker'} onClick={() => setRole('jobseeker')} />
+                                            <RoleChip label="💼 Freelancer" active={role === 'freelancer'} onClick={() => setRole('freelancer')} />
+                                            <RoleChip label="🚀 Founder" active={role === 'founder'} onClick={() => setRole('founder')} />
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        type="submit"
+                                        disabled={loading}
+                                        className="w-full bg-[#07da63] text-black font-bold h-11 rounded-full mt-6 hover:bg-[#08f26e] transition-colors disabled:opacity-50"
+                                    >
+                                        {loading ? 'Creating...' : 'Create Account'}
+                                    </button>
+                                </form>
 
                                 <p className="text-[#6b7280] text-[15px] mt-10">
                                     Already have an account? <button onClick={() => setView('login')} className="text-[#07da63] hover:underline">Sign in</button>
