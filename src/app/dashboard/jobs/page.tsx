@@ -194,7 +194,7 @@ export default function JobsPage() {
                 <div className="bg-[#0d0d0d] border border-[#1a1a1a] rounded-2xl p-4">
                     <h3 className="text-xl font-bold mb-4">Top Hiring Founders</h3>
                     <div className="space-y-4">
-                        {topFounders.length > 0 ? topFounders.map(founder => (
+                        {topFounders.length > 0 ? topFounders.map((founder: any) => (
                             <FounderItem
                                 key={founder.username}
                                 name={founder.username}
