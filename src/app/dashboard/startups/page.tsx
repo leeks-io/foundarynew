@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
     Rocket, Lightbulb, Users, Plus, ChevronRight,
@@ -10,10 +10,91 @@ import {
 import { cn } from '@/lib/utils'
 import StartupCard from '@/components/marketplace/StartupCard'
 import Link from 'next/link'
+import { createClient } from '@/utils/supabase/client'
 
 export default function StartupHub() {
     const [activeTab, setActiveTab] = useState('marketplace')
-    const [isPremium, setIsPremium] = useState(false) // Toggle for demo
+    const [isPremium, setIsPremium] = useState(false)
+    const [startups, setStartups] = useState<any[]>([])
+    const [blueprints, setBlueprints] = useState<any[]>([])
+    const [cofounders, setCofounders] = useState<any[]>([])
+    const [loading, setLoading] = useState(true)
+    const [currentUser, setCurrentUser] = useState<any>(null)
+
+    // Form states
+    const [startupName, setStartupName] = useState('')
+    const [tagline, setTagline] = useState('')
+    const [description, setDescription] = useState('')
+    const [industry, setIndustry] = useState('')
+    const [stage, setStage] = useState('Idea')
+    const [isPosting, setIsPosting] = useState(false)
+
+    const supabase = createClient()
+
+    useEffect(() => {
+        const fetchData = async () => {
+            setLoading(true)
+            const { data: { user } } = await supabase.auth.getUser()
+            setCurrentUser(user)
+            if (user?.user_metadata?.is_premium) {
+                setIsPremium(true)
+            }
+
+            // Fetch Startups
+            const { data: startupsData } = await supabase
+                .from('startups')
+                .select('*')
+                .order('created_at', { ascending: false })
+
+            // Fetch Blueprints
+            const { data: blueprintsData } = await supabase
+                .from('blueprints')
+                .select('*')
+                .order('created_at', { ascending: false })
+
+            // Fetch Cofounders (users with builder profile)
+            const { data: usersData } = await supabase
+                .from('users')
+                .select('username, role, builder_score, profiles(profile_image), skills')
+                .limit(6)
+
+            if (startupsData) setStartups(startupsData)
+            if (blueprintsData) setBlueprints(blueprintsData)
+            if (usersData) setCofounders(usersData)
+            setLoading(false)
+        }
+
+        fetchData()
+    }, [supabase])
+
+    const handlePostStartup = async () => {
+        if (!startupName || !currentUser) return
+        setIsPosting(true)
+
+        const { error } = await supabase
+            .from('startups')
+            .insert({
+                user_id: currentUser.id,
+                name: startupName,
+                tagline,
+                description,
+                industry,
+                stage,
+                metrics: { users: 0, revenue: 0 },
+                price_usdc: 0 // Default or handle in form
+            })
+
+        if (!error) {
+            alert("Startup posted successfully!")
+            setActiveTab('marketplace')
+            // Refresh startups
+            const { data } = await supabase.from('startups').select('*').order('created_at', { ascending: false })
+            if (data) setStartups(data)
+        } else {
+            alert("Error posting startup: " + error.message)
+        }
+        setIsPosting(false)
+    }
 
     const tabs = [
         { id: 'marketplace', label: 'Startups For Sale' },
@@ -22,10 +103,9 @@ export default function StartupHub() {
         { id: 'blueprints', label: 'Blueprints' },
     ]
 
-    const startups = [
-        { name: "AI Resume Builder", revenue: 4200, users: 8500, price: 45000, industry: "AI · SaaS" },
-        { name: "SaaS Dev Tools", revenue: 12500, users: 3200, price: 185000, industry: "DevTools" },
-        { name: "Social Media Scheduler", revenue: 1200, users: 450, price: 15000, industry: "Marketing" },
+    // Fallback if DB empty
+    const displayStartups = startups.length > 0 ? startups : [
+        { name: "AI Resume Builder", revenue: 4200, users: 8500, price: 45000, industry: "AI · SaaS" }
     ]
 
     return (
@@ -86,8 +166,16 @@ export default function StartupHub() {
 
                             {isPremium && (
                                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
-                                    {startups.map(startup => (
-                                        <StartupCard key={startup.name} {...startup} />
+                                    {displayStartups.map((startup, idx) => (
+                                        <StartupCard
+                                            key={startup.id || idx}
+                                            name={startup.name}
+                                            revenue={startup.metrics?.revenue || 0}
+                                            users={startup.metrics?.users || 0}
+                                            price={startup.price_usdc}
+                                            industry={startup.industry}
+                                            logo={startup.logo_url}
+                                        />
                                     ))}
                                 </div>
                             )}
@@ -107,47 +195,73 @@ export default function StartupHub() {
                                 <div className="space-y-6">
                                     <div className="space-y-2">
                                         <label className="text-xs font-bold text-[#6b7280] uppercase tracking-widest ml-1">Startup Name</label>
-                                        <input type="text" placeholder="e.g. Foundry Network" className="w-full bg-black border border-[#1a1a1a] rounded-xl px-5 py-3 text-white focus:border-[#07da63] focus:outline-none" />
+                                        <input
+                                            type="text"
+                                            value={startupName}
+                                            onChange={(e) => setStartupName(e.target.value)}
+                                            placeholder="e.g. Foundry Network"
+                                            className="w-full bg-black border border-[#1a1a1a] rounded-xl px-5 py-3 text-white focus:border-[#07da63] focus:outline-none"
+                                        />
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-xs font-bold text-[#6b7280] uppercase tracking-widest ml-1">Tagline</label>
-                                        <input type="text" placeholder="A brief one-liner about your startup" className="w-full bg-black border border-[#1a1a1a] rounded-xl px-5 py-3 text-white focus:border-[#07da63] focus:outline-none" />
+                                        <input
+                                            type="text"
+                                            value={tagline}
+                                            onChange={(e) => setTagline(e.target.value)}
+                                            placeholder="A brief one-liner about your startup"
+                                            className="w-full bg-black border border-[#1a1a1a] rounded-xl px-5 py-3 text-white focus:border-[#07da63] focus:outline-none"
+                                        />
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-xs font-bold text-[#6b7280] uppercase tracking-widest ml-1">Description</label>
-                                        <textarea placeholder="Tell us about the problem you're solving..." className="w-full h-32 bg-black border border-[#1a1a1a] rounded-xl px-5 py-3 text-white focus:border-[#07da63] focus:outline-none resize-none" />
+                                        <textarea
+                                            value={description}
+                                            onChange={(e) => setDescription(e.target.value)}
+                                            placeholder="Tell us about the problem you're solving..."
+                                            className="w-full h-32 bg-black border border-[#1a1a1a] rounded-xl px-5 py-3 text-white focus:border-[#07da63] focus:outline-none resize-none"
+                                        />
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div className="space-y-2">
                                             <label className="text-xs font-bold text-[#6b7280] uppercase tracking-widest ml-1">Industry</label>
-                                            <select className="w-full bg-black border border-[#1a1a1a] rounded-xl px-5 py-3 text-[#6b7280] focus:border-[#07da63] focus:outline-none appearance-none">
-                                                <option>Select Industry</option>
-                                                <option>SaaS</option>
-                                                <option>Web3</option>
-                                                <option>AI</option>
+                                            <select
+                                                value={industry}
+                                                onChange={(e) => setIndustry(e.target.value)}
+                                                className="w-full bg-black border border-[#1a1a1a] rounded-xl px-5 py-3 text-[#6b7280] focus:border-[#07da63] focus:outline-none appearance-none"
+                                            >
+                                                <option value="">Select Industry</option>
+                                                <option value="SaaS">SaaS</option>
+                                                <option value="Web3">Web3</option>
+                                                <option value="AI">AI</option>
+                                                <option value="DevTools">DevTools</option>
+                                                <option value="Marketing">Marketing</option>
                                             </select>
                                         </div>
                                         <div className="space-y-2">
                                             <label className="text-xs font-bold text-[#6b7280] uppercase tracking-widest ml-1">Stage</label>
                                             <div className="flex gap-2 bg-black p-1 rounded-xl border border-[#1a1a1a]">
                                                 {['Idea', 'MVP', 'Revenue'].map(s => (
-                                                    <button key={s} className="flex-1 py-2 text-[10px] font-bold text-[#6b7280] hover:text-white transition-colors">{s}</button>
+                                                    <button
+                                                        key={s}
+                                                        onClick={() => setStage(s)}
+                                                        className={cn(
+                                                            "flex-1 py-2 text-[10px] font-bold transition-colors rounded-lg",
+                                                            stage === s ? "bg-[#111111] text-white border border-[#1a1a1a]" : "text-[#6b7280] hover:text-white"
+                                                        )}
+                                                    >
+                                                        {s}
+                                                    </button>
                                                 ))}
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="space-y-4 pt-4">
-                                        <p className="text-xs font-bold text-[#6b7280] uppercase tracking-widest ml-1">Looking for:</p>
-                                        <div className="flex flex-wrap gap-2">
-                                            {['Cofounder', 'Developer', 'Designer', 'Marketer', 'Investor'].map(chip => (
-                                                <button key={chip} className="px-4 py-1.5 border border-[#1a1a1a] rounded-full text-xs font-bold text-[#6b7280] hover:border-[#07da63]/50 hover:text-white transition-all">
-                                                    {chip}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                    <button className="w-full bg-[#07da63] text-black font-bold h-14 rounded-xl mt-8 hover:bg-[#08f26e] transition-colors flex items-center justify-center gap-2">
-                                        Post Startup <Zap size={20} className="fill-current" />
+                                    <button
+                                        disabled={isPosting}
+                                        onClick={handlePostStartup}
+                                        className="w-full bg-[#07da63] text-black font-bold h-14 rounded-xl mt-8 hover:bg-[#08f26e] transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                                    >
+                                        {isPosting ? 'Posting...' : 'Post Startup'} <Zap size={20} className="fill-current" />
                                     </button>
                                 </div>
                             </div>
@@ -162,44 +276,41 @@ export default function StartupHub() {
                             exit={{ opacity: 0, y: -10 }}
                             className="space-y-6"
                         >
-                            {[1, 2, 3].map(i => (
-                                <div key={i} className="bg-[#0d0d0d] border border-[#1a1a1a] border-l-4 border-l-[#07da63] p-8 rounded-r-[2.5rem] group hover:bg-[#111111] transition-all">
+                            {blueprints.length > 0 ? blueprints.map(bp => (
+                                <div key={bp.id} className="bg-[#0d0d0d] border border-[#1a1a1a] border-l-4 border-l-[#07da63] p-8 rounded-r-[2.5rem] group hover:bg-[#111111] transition-all">
                                     <div className="flex justify-between items-start mb-4">
                                         <div>
-                                            <h3 className="text-2xl font-bold mb-2">AI tool that summarizes WhatsApp voice notes</h3>
+                                            <h3 className="text-2xl font-bold mb-2">{bp.title}</h3>
                                             <div className="flex gap-2">
-                                                <span className="px-3 py-1 bg-black border border-[#1a1a1a] rounded-lg text-[10px] font-bold text-[#6b7280] uppercase tracking-widest">AI</span>
-                                                <span className="px-3 py-1 bg-black border border-[#1a1a1a] rounded-lg text-[10px] font-bold text-[#6b7280] uppercase tracking-widest">SaaS</span>
+                                                <span className="px-3 py-1 bg-black border border-[#1a1a1a] rounded-lg text-[10px] font-bold text-[#6b7280] uppercase tracking-widest">{bp.category}</span>
                                             </div>
                                         </div>
                                         <div className="text-right">
                                             <span className="text-xs font-bold text-[#6b7280] uppercase tracking-widest block mb-1">Price</span>
-                                            <span className="text-2xl font-bold text-[#07da63]">50 USDC</span>
+                                            <span className="text-2xl font-bold text-[#07da63]">{bp.price_usdc} USDC</span>
                                         </div>
                                     </div>
                                     <p className="text-[#6b7280] font-medium mb-8 max-w-2xl">
-                                        A chrome extension that uses Whisper API to transcribe and summarize voice notes directly in the WhatsApp Web interface. Solves the pain of long voice messages.
+                                        {bp.description}
                                     </p>
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-6">
                                             <div className="flex items-center gap-2 text-xs font-bold text-[#6b7280]">
-                                                <Users size={16} /> 24 interested
+                                                <Users size={16} /> {bp.metrics?.interested || 0} interested
                                             </div>
                                             <div className="flex items-center gap-2 text-xs font-bold text-[#6b7280]">
-                                                <Rocket size={16} /> 8 building
-                                            </div>
-                                            <div className="flex items-center gap-2 text-xs font-bold text-[#6b7280]">
-                                                <MessageSquare size={16} /> 12 discussions
+                                                <Rocket size={16} /> {bp.metrics?.builders || 0} building
                                             </div>
                                         </div>
                                         <div className="flex gap-3">
                                             <button className="bg-[#07da63] text-black font-bold px-6 py-2 rounded-lg text-sm">Join Build</button>
                                             <button className="border border-[#1a1a1a] text-white font-bold px-6 py-2 rounded-lg text-sm hover:bg-white/5 transition-all">Buy Idea</button>
-                                            <button className="border border-[#1a1a1a] text-white font-bold px-6 py-2 rounded-lg text-sm hover:bg-white/5 transition-all">Discuss</button>
                                         </div>
                                     </div>
                                 </div>
-                            ))}
+                            )) : (
+                                <div className="p-12 text-center text-[#6b7280]">No blueprints found.</div>
+                            )}
                         </motion.div>
                     )}
 
@@ -211,24 +322,24 @@ export default function StartupHub() {
                             exit={{ opacity: 0, y: -10 }}
                             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
                         >
-                            {[1, 2, 3, 4, 5, 6].map(i => (
-                                <div key={i} className="bg-[#0d0d0d] border border-[#1a1a1a] p-6 rounded-[2rem] group hover:border-[#07da63]/30 transition-all">
+                            {cofounders.map(cf => (
+                                <div key={cf.username} className="bg-[#0d0d0d] border border-[#1a1a1a] p-6 rounded-[2rem] group hover:border-[#07da63]/30 transition-all">
                                     <div className="flex flex-col items-center text-center">
                                         <div className="w-20 h-20 rounded-full border-2 border-[#1a1a1a] p-1 mb-4 group-hover:border-[#07da63] transition-all">
-                                            <img src={`https://i.pravatar.cc/150?u=${i}`} className="w-full h-full rounded-full object-cover" alt="Profile" />
+                                            <img src={(cf.profiles as any)?.profile_image || `https://i.pravatar.cc/150?u=${cf.username}`} className="w-full h-full rounded-full object-cover" alt="Profile" />
                                         </div>
                                         <h3 className="font-bold text-lg flex items-center gap-1.5">
-                                            David Park <CheckCircle2 size={16} className="text-[#07da63]" />
+                                            {cf.username} <CheckCircle2 size={16} className="text-[#07da63]" />
                                         </h3>
-                                        <p className="text-[#6b7280] text-sm font-medium mb-6">Full-Stack Engineer</p>
+                                        <p className="text-[#6b7280] text-sm font-medium mb-6">{cf.role}</p>
                                         <div className="flex flex-wrap justify-center gap-2 mb-8 px-2">
-                                            {['Solana', 'React', 'Rust'].map(s => (
+                                            {cf.skills?.slice(0, 3).map((s: string) => (
                                                 <span key={s} className="px-2 py-0.5 bg-black border border-[#1a1a1a] rounded text-[10px] font-bold text-[#6b7280]">{s}</span>
                                             ))}
                                         </div>
-                                        <button className="w-full bg-[#07da63] text-black font-bold py-2.5 rounded-xl text-sm hover:bg-[#08f26e] transition-colors">
+                                        <Link href={`/dashboard/builder/${cf.username}`} className="w-full bg-[#07da63] text-black font-bold py-2.5 rounded-xl text-sm hover:bg-[#08f26e] transition-colors text-center">
                                             View Profile
-                                        </button>
+                                        </Link>
                                     </div>
                                 </div>
                             ))}

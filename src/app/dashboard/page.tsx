@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
     Image as ImageIcon, Lightbulb, Rocket, MapPin,
@@ -10,9 +10,83 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
+import { createClient } from '@/utils/supabase/client'
+import { formatDistanceToNow } from 'date-fns'
+import SocialPost from '@/components/dashboard/SocialPost'
 
 export default function DashboardPage() {
     const [activeTab, setActiveTab] = useState('foryou')
+    const [posts, setPosts] = useState<any[]>([])
+    const [trendingBuilders, setTrendingBuilders] = useState<any[]>([])
+    const [activeJobs, setActiveJobs] = useState<any[]>([])
+    const [loading, setLoading] = useState(true)
+    const [newPostContent, setNewPostContent] = useState('')
+    const [isPosting, setIsPosting] = useState(false)
+    const [currentUser, setCurrentUser] = useState<any>(null)
+
+    const supabase = createClient()
+
+    useEffect(() => {
+        const fetchData = async () => {
+            setLoading(true)
+            const { data: { user } } = await supabase.auth.getUser()
+            setCurrentUser(user)
+
+            // Fetch Posts
+            const { data: postsData } = await supabase
+                .from('posts')
+                .select('*, users(username, role, is_premium, profiles(profile_image))')
+                .order('created_at', { ascending: false })
+                .limit(20)
+
+            // Fetch Trending Builders
+            const { data: buildersData } = await supabase
+                .from('users')
+                .select('username, builder_score, profiles(profile_image)')
+                .order('builder_score', { ascending: false })
+                .limit(3)
+
+            // Fetch Active Jobs
+            const { data: jobsData } = await supabase
+                .from('jobs')
+                .select('title, budget, created_at')
+                .eq('status', 'open')
+                .limit(2)
+
+            if (postsData) setPosts(postsData)
+            if (buildersData) setTrendingBuilders(buildersData)
+            if (jobsData) setActiveJobs(jobsData)
+            setLoading(false)
+        }
+
+        fetchData()
+    }, [supabase])
+
+    const handlePostSubmit = async () => {
+        if (!newPostContent.trim() || !currentUser) return
+        setIsPosting(true)
+
+        const { data, error } = await supabase
+            .from('posts')
+            .insert({
+                user_id: currentUser.id,
+                content: newPostContent,
+                post_type: 'update'
+            })
+            .select('*, users(username, role, is_premium, profiles(profile_image))')
+            .single()
+
+        if (!error && data) {
+            setPosts([data, ...posts])
+            setNewPostContent('')
+        }
+        setIsPosting(false)
+    }
+
+    // Fallback display logic for empty states
+    const displayPosts = posts.length > 0 ? posts : [
+        { id: 1, content: "Welcome to Foundry! Start by posting what you're building today. 🚀", created_at: new Date().toISOString(), likes_count: 5, replies_count: 2, users: { username: "Foundry", role: "Official", is_premium: true } }
+    ]
 
     return (
         <>
@@ -33,11 +107,13 @@ export default function DashboardPage() {
                 {/* Post Composer */}
                 <div className="p-4 border-b border-[#1a1a1a] flex gap-4">
                     <div className="w-10 h-10 rounded-full bg-[#1a1a1a] shrink-0 overflow-hidden">
-                        <img src="https://i.pravatar.cc/150?u=david" alt="Me" className="w-full h-full object-cover" />
+                        <img src={currentUser?.user_metadata?.avatar_url || `https://i.pravatar.cc/150?u=${currentUser?.id || 'default'}`} alt="Me" className="w-full h-full object-cover" />
                     </div>
                     <div className="flex-1 pt-2">
                         <textarea
                             placeholder="What are you building?"
+                            value={newPostContent}
+                            onChange={(e) => setNewPostContent(e.target.value)}
                             className="w-full bg-transparent border-none focus:outline-none text-xl placeholder:text-[#6b7280] resize-none mb-4"
                             rows={2}
                         />
@@ -48,8 +124,12 @@ export default function DashboardPage() {
                                 <button className="p-2 hover:bg-[#07da63]/10 rounded-full transition-colors"><Rocket size={18} /></button>
                                 <button className="p-2 hover:bg-[#07da63]/10 rounded-full transition-colors"><MapPin size={18} /></button>
                             </div>
-                            <button className="bg-[#07da63] text-black font-bold px-5 py-1.5 rounded-full hover:bg-[#08f26e] transition-colors">
-                                Post
+                            <button
+                                onClick={handlePostSubmit}
+                                disabled={isPosting || !newPostContent.trim()}
+                                className="bg-[#07da63] text-black font-bold px-5 py-1.5 rounded-full hover:bg-[#08f26e] transition-colors disabled:opacity-50"
+                            >
+                                {isPosting ? '...' : 'Post'}
                             </button>
                         </div>
                     </div>
@@ -57,34 +137,24 @@ export default function DashboardPage() {
 
                 {/* Feed Posts */}
                 <div className="divide-y divide-[#1a1a1a]">
-                    <SocialPost
-                        name="Sarah Chen" handle="@sarahbuilds" time="2h"
-                        role="Founder"
-                        content="Just crossed $1k MRR with my AI payroll tool! 🚀 The builder community here has been instrumental in our early growth. Next stop: $5k."
-                        likes="142" comments="24" reposts="12" views="2.4k"
-                        avatar="https://i.pravatar.cc/150?img=47"
-                        isPremium
-                    />
-                    <SocialPost
-                        name="Alex Rivera" handle="@alex" time="4h"
-                        role="Talent"
-                        content="Looking for a React/Solana developer to help with a new marketplace blueprint. Anyone interested in joining the build? DM me! ⬡"
-                        likes="86" comments="15" reposts="8" views="1.8k"
-                        avatar="https://i.pravatar.cc/150?img=33"
-                    />
-                    <BlueprintPost
-                        title="AI tool that summarizes WhatsApp voice notes"
-                        tags={["SaaS", "AI"]}
-                        interested="42" building="12"
-                    />
-                    <SocialPost
-                        name="Marcus Thorne" handle="@marcus" time="6h"
-                        role="Freelancer"
-                        content="Completed 3 smart contract audits this week. Open for new gigs! Check my services tab for pricing. 🔒"
-                        likes="124" comments="12" reposts="10" views="3.1k"
-                        avatar="https://i.pravatar.cc/150?img=12"
-                        isPremium
-                    />
+                    {loading ? (
+                        <div className="p-8 text-center text-[#6b7280]">Loading feed...</div>
+                    ) : (
+                        displayPosts.map((post) => (
+                            <SocialPost
+                                key={post.id}
+                                name={post.users?.username || 'Anonymous'}
+                                handle={`@${post.users?.username || 'anon'}`}
+                                time={formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
+                                role={post.users?.role}
+                                content={post.content}
+                                likes={post.likes_count || 0}
+                                comments={post.replies_count || 0}
+                                avatar={post.users?.profiles?.profile_image || `https://i.pravatar.cc/150?u=${post.user_id}`}
+                                isPremium={post.users?.is_premium}
+                            />
+                        ))
+                    )}
                 </div>
             </div>
 
@@ -104,11 +174,11 @@ export default function DashboardPage() {
                 <div className="bg-[#0d0d0d] border border-[#1a1a1a] rounded-2xl p-4">
                     <h3 className="text-xl font-bold mb-4">Builder Score</h3>
                     <div className="flex items-end justify-between mb-2">
-                        <span className="text-3xl font-bold text-[#07da63]">842</span>
-                        <span className="text-xs font-bold text-[#6b7280] uppercase tracking-wider mb-1">Top 5% Founder</span>
+                        <span className="text-3xl font-bold text-[#07da63]">{currentUser?.user_metadata?.builder_score || 0}</span>
+                        <span className="text-xs font-bold text-[#6b7280] uppercase tracking-wider mb-1">Foundry Builder</span>
                     </div>
                     <div className="h-2 bg-[#1a1a1a] rounded-full overflow-hidden">
-                        <div className="h-full bg-[#07da63] w-[84%]" />
+                        <div className="h-full bg-[#07da63] w-[10%]" />
                     </div>
                 </div>
 
@@ -116,9 +186,15 @@ export default function DashboardPage() {
                 <div className="bg-[#0d0d0d] border border-[#1a1a1a] rounded-2xl p-4">
                     <h3 className="text-xl font-bold mb-4">Trending Builders</h3>
                     <div className="space-y-4">
-                        <TrendingUser name="Elena V." handle="@elena" score="910" img="https://i.pravatar.cc/150?img=44" />
-                        <TrendingUser name="Marcus T." handle="@marcus" score="885" img="https://i.pravatar.cc/150?img=12" />
-                        <TrendingUser name="Sophie L." handle="@sophie" score="840" img="https://i.pravatar.cc/150?img=5" />
+                        {trendingBuilders.map((builder) => (
+                            <TrendingUser
+                                key={builder.username}
+                                name={builder.username}
+                                handle={`@${builder.username}`}
+                                score={builder.builder_score}
+                                img={builder.profiles?.profile_image || `https://i.pravatar.cc/150?u=${builder.username}`}
+                            />
+                        ))}
                     </div>
                     <button className="w-full mt-4 text-[#07da63] text-sm font-bold hover:underline py-2">
                         Show more
@@ -129,14 +205,12 @@ export default function DashboardPage() {
                 <div className="bg-[#0d0d0d] border border-[#1a1a1a] rounded-2xl p-4">
                     <h3 className="text-xl font-bold mb-4">Active Jobs</h3>
                     <div className="space-y-4">
-                        <div className="group cursor-pointer">
-                            <p className="font-bold text-[15px] group-hover:underline">Senior React Engineer</p>
-                            <p className="text-[#6b7280] text-sm">Foundry Lab · $5k/mo</p>
-                        </div>
-                        <div className="group cursor-pointer">
-                            <p className="font-bold text-[15px] group-hover:underline">Product Designer</p>
-                            <p className="text-[#6b7280] text-sm">Nexus AI · $4k/mo</p>
-                        </div>
+                        {activeJobs.map((job) => (
+                            <div key={job.title} className="group cursor-pointer">
+                                <p className="font-bold text-[15px] group-hover:underline">{job.title}</p>
+                                <p className="text-[#6b7280] text-sm">${job.budget}/mo</p>
+                            </div>
+                        ))}
                     </div>
                 </div>
 
@@ -180,61 +254,6 @@ function TabItem({ label, active, onClick }: { label: string, active: boolean, o
     )
 }
 
-function SocialPost({ name, handle, time, role, content, likes, comments, reposts, views, avatar, isPremium }: any) {
-    return (
-        <div className="p-4 hover:bg-[#080808] transition-colors cursor-pointer group flex gap-3">
-            <img src={avatar} alt={name} className="w-10 h-10 rounded-full shrink-0" />
-            <div className="flex-1">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="font-bold hover:underline text-[15px]">{name}</span>
-                        {isPremium && <CheckCircle2 size={14} className="text-[#07da63]" />}
-                        <span className="text-[#6b7280] text-sm">{handle} · {time}</span>
-                        {role && (
-                            <span className="text-[10px] bg-[#1a1a1a] text-[#07da63] font-bold px-1.5 py-0.5 rounded border border-[#07da63]/20 uppercase tracking-widest">
-                                {role}
-                            </span>
-                        )}
-                    </div>
-                    <button className="text-[#6b7280] hover:text-[#07da63] hover:bg-[#07da63]/10 p-2 rounded-full transition-colors">
-                        <MoreHorizontal size={16} />
-                    </button>
-                </div>
-                <p className="text-[15px] mt-1 leading-normal whitespace-pre-wrap">{content}</p>
-
-                <div className="flex items-center justify-between mt-3 text-[#6b7280] max-w-sm">
-                    <button className="flex items-center gap-2 hover:text-[#07da63] transition-colors group/action">
-                        <div className="p-2 rounded-full group-hover/action:bg-[#07da63]/10">
-                            <MessageCircle size={18} />
-                        </div>
-                        <span className="text-xs">{comments}</span>
-                    </button>
-                    <button className="flex items-center gap-2 hover:text-[#07da63] transition-colors group/action">
-                        <div className="p-2 rounded-full group-hover/action:bg-[#07da63]/10">
-                            <Repeat size={18} />
-                        </div>
-                        <span className="text-xs">{reposts}</span>
-                    </button>
-                    <button className="flex items-center gap-2 hover:text-[#ff0055] transition-colors group/action">
-                        <div className="p-2 rounded-full group-hover/action:bg-[#ff0055]/10">
-                            <Heart size={18} />
-                        </div>
-                        <span className="text-xs">{likes}</span>
-                    </button>
-                    <button className="flex items-center gap-2 hover:text-[#07da63] transition-colors group/action">
-                        <div className="p-2 rounded-full group-hover/action:bg-[#07da63]/10">
-                            <BarChart2 size={18} />
-                        </div>
-                        <span className="text-xs">{views}</span>
-                    </button>
-                    <button className="hover:text-[#07da63] transition-colors group/action p-2 rounded-full group-hover/action:bg-[#07da63]/10">
-                        <Share size={18} />
-                    </button>
-                </div>
-            </div>
-        </div>
-    )
-}
 
 function BlueprintPost({ title, tags, interested, building }: any) {
     return (

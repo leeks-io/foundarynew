@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
     Search, Briefcase, MapPin, DollarSign, Calendar,
@@ -9,29 +9,94 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
+import { createClient } from '@/utils/supabase/client'
+import { formatDistanceToNow } from 'date-fns'
 
 export default function JobsPage() {
     const [searchQuery, setSearchQuery] = useState('')
     const [activeFilter, setActiveFilter] = useState('All')
     const [showLimitModal, setShowLimitModal] = useState(false)
     const [applicationCount, setApplicationCount] = useState(0)
+    const [jobs, setJobs] = useState<any[]>([])
+    const [topFounders, setTopFounders] = useState<any[]>([])
+    const [loading, setLoading] = useState(true)
+    const [currentUser, setCurrentUser] = useState<any>(null)
+
+    const supabase = createClient()
+    const DAILY_LIMIT = 2
+
+    useEffect(() => {
+        const fetchData = async () => {
+            setLoading(true)
+            const { data: { user } } = await supabase.auth.getUser()
+            setCurrentUser(user)
+
+            if (user) {
+                // Fetch user's application count for today
+                const today = new Date()
+                today.setHours(0, 0, 0, 0)
+                const { count } = await supabase
+                    .from('applications')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('applicant_id', user.id)
+                    .gte('applied_at', today.toISOString())
+
+                setApplicationCount(count || 0)
+            }
+
+            // Fetch Jobs
+            const { data: jobsData } = await supabase
+                .from('jobs')
+                .select('*, users:founder_id(username, profiles(profile_image))')
+                .eq('status', 'open')
+                .order('created_at', { ascending: false })
+
+            // Fetch Top Hiring Founders (mocking with user scores for now as we don't have deep hiring stats)
+            const { data: foundersData } = await supabase
+                .from('users')
+                .select('username, builder_score, profiles(profile_image)')
+                .order('builder_score', { ascending: false })
+                .limit(3)
+
+            if (jobsData) setJobs(jobsData)
+            if (foundersData) setTopFounders(foundersData)
+            setLoading(false)
+        }
+
+        fetchData()
+    }, [supabase])
+
+    const handleApply = async (jobId: string) => {
+        if (!currentUser) return // Should redirect to auth or show message
+
+        if (applicationCount >= DAILY_LIMIT && !currentUser?.user_metadata?.is_premium) {
+            setShowLimitModal(true)
+        } else {
+            const { error } = await supabase
+                .from('applications')
+                .insert({
+                    job_id: jobId,
+                    applicant_id: currentUser.id,
+                    status: 'pending'
+                })
+
+            if (!error) {
+                setApplicationCount(prev => prev + 1)
+                alert("Application sent successfully!")
+            } else if (error.code === '23505') {
+                alert("You have already applied for this job.")
+            } else {
+                alert("Error sending application: " + error.message)
+            }
+        }
+    }
 
     const filters = ['All', 'Remote', 'Full-time', 'Part-time', 'Contract', 'Web3', 'AI', 'Design', 'Dev']
 
-    const jobs = [
-        { id: 1, title: 'Lead Frontend Engineer', company: 'Nexus AI', handle: '@nexus', type: 'Full-time', budget: '120k+', location: 'Remote', time: '2h', logo: 'N' },
-        { id: 2, title: 'Smart Contract Auditor', company: 'EtherGuard', handle: '@etherguard', type: 'Contract', budget: '5,000 USDC', location: 'Remote', time: '4h', logo: 'E' },
-        { id: 3, title: 'Growth Marketer', company: 'Foundry Labs', handle: '@foundry', type: 'Full-time', budget: '80k+', location: 'Hybrid', time: '6h', logo: '⬡' },
+    // Fallback jobs if DB is empty
+    const displayJobs = jobs.length > 0 ? jobs : [
+        { id: '1', title: 'Lead Frontend Engineer', company_name: 'Nexus AI', username: 'nexus', job_type: 'fulltime', budget: 5000, is_remote: true, created_at: new Date().toISOString() }
     ]
-
-    const handleApply = () => {
-        if (applicationCount >= 2) {
-            setShowLimitModal(true)
-        } else {
-            setApplicationCount(prev => prev + 1)
-            // Actual apply logic here
-        }
-    }
 
     return (
         <div className="flex flex-1 min-w-0">
@@ -78,40 +143,48 @@ export default function JobsPage() {
 
                 {/* Job Listings */}
                 <div className="divide-y divide-[#1a1a1a]">
-                    {jobs.map(job => (
-                        <div key={job.id} className="p-5 hover:bg-[#080808] transition-colors group cursor-pointer flex gap-4">
-                            <div className="w-12 h-12 rounded-xl bg-[#111111] border border-[#1a1a1a] flex items-center justify-center font-bold text-xl text-[#07da63] shrink-0">
-                                {job.logo}
-                            </div>
-                            <div className="flex-1">
-                                <div className="flex justify-between items-start mb-1">
-                                    <div>
-                                        <h3 className="font-bold text-lg group-hover:underline">{job.title}</h3>
-                                        <p className="text-[#6b7280] text-sm font-medium">{job.company} {job.handle}</p>
+                    {loading ? (
+                        <div className="p-8 text-center text-[#6b7280]">Loading jobs...</div>
+                    ) : (
+                        displayJobs.map(job => (
+                            <div key={job.id} className="p-5 hover:bg-[#080808] transition-colors group cursor-pointer flex gap-4">
+                                <div className="w-12 h-12 rounded-xl bg-[#111111] border border-[#1a1a1a] flex items-center justify-center font-bold text-xl text-[#07da63] shrink-0 overflow-hidden">
+                                    {(job.users as any)?.profiles?.profile_image ? (
+                                        <img src={(job.users as any).profiles.profile_image} className="w-full h-full object-cover" alt="Logo" />
+                                    ) : (
+                                        job.company_name?.[0] || '⬡'
+                                    )}
+                                </div>
+                                <div className="flex-1">
+                                    <div className="flex justify-between items-start mb-1">
+                                        <div>
+                                            <h3 className="font-bold text-lg group-hover:underline">{job.title}</h3>
+                                            <p className="text-[#6b7280] text-sm font-medium">{job.company_name} @{(job.users as any)?.username || 'anon'}</p>
+                                        </div>
+                                        <button className="text-[#6b7280] hover:text-[#07da63] transition-colors p-2 rounded-full hover:bg-[#07da63]/10">
+                                            <Bookmark size={18} />
+                                        </button>
                                     </div>
-                                    <button className="text-[#6b7280] hover:text-[#07da63] transition-colors p-2 rounded-full hover:bg-[#07da63]/10">
-                                        <Bookmark size={18} />
-                                    </button>
-                                </div>
 
-                                <div className="flex flex-wrap gap-x-4 gap-y-1 my-3 text-[#6b7280] text-xs font-bold uppercase tracking-wider">
-                                    <div className="flex items-center gap-1"><MapPin size={12} /> {job.location}</div>
-                                    <div className="flex items-center gap-1"><Rocket size={12} /> {job.type}</div>
-                                    <div className="flex items-center gap-1"><Calendar size={12} /> Posted {job.time} ago</div>
-                                </div>
+                                    <div className="flex flex-wrap gap-x-4 gap-y-1 my-3 text-[#6b7280] text-xs font-bold uppercase tracking-wider">
+                                        <div className="flex items-center gap-1"><MapPin size={12} /> {job.is_remote ? 'Remote' : 'On-site'}</div>
+                                        <div className="flex items-center gap-1"><Rocket size={12} /> {job.job_type}</div>
+                                        <div className="flex items-center gap-1"><Calendar size={12} /> {formatDistanceToNow(new Date(job.created_at), { addSuffix: true })}</div>
+                                    </div>
 
-                                <div className="flex items-center justify-between mt-4">
-                                    <div className="text-xl font-bold text-[#07da63]">{job.budget} <span className="text-[10px] text-[#6b7280] uppercase">USDC</span></div>
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); handleApply(); }}
-                                        className="bg-transparent border border-[#07da63] text-[#07da63] font-bold px-6 py-1.5 rounded-lg hover:bg-[#07da63]/10 transition-colors text-sm flex items-center gap-2"
-                                    >
-                                        Apply Now <ArrowUpRight size={16} />
-                                    </button>
+                                    <div className="flex items-center justify-between mt-4">
+                                        <div className="text-xl font-bold text-[#07da63]">{job.budget} <span className="text-[10px] text-[#6b7280] uppercase">USDC</span></div>
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); handleApply(job.id); }}
+                                            className="bg-transparent border border-[#07da63] text-[#07da63] font-bold px-6 py-1.5 rounded-lg hover:bg-[#07da63]/10 transition-colors text-sm flex items-center gap-2"
+                                        >
+                                            Apply Now <ArrowUpRight size={16} />
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    ))}
+                        ))
+                    )}
                 </div>
             </div>
 
@@ -126,11 +199,11 @@ export default function JobsPage() {
                             <p className="text-[10px] text-[#6b7280] font-bold uppercase">Applied</p>
                         </div>
                         <div className="text-center p-2 rounded-xl bg-[#111111] border border-[#1a1a1a]">
-                            <p className="text-xl font-bold text-white">1</p>
+                            <p className="text-xl font-bold text-white">-</p>
                             <p className="text-[10px] text-[#6b7280] font-bold uppercase">Interviews</p>
                         </div>
                         <div className="text-center p-2 rounded-xl bg-[#111111] border border-[#1a1a1a]">
-                            <p className="text-xl font-bold text-white">5</p>
+                            <p className="text-xl font-bold text-white">-</p>
                             <p className="text-[10px] text-[#6b7280] font-bold uppercase">Saved</p>
                         </div>
                     </div>
@@ -144,7 +217,7 @@ export default function JobsPage() {
                         <h4 className="font-bold text-sm">Free Tier Notice</h4>
                     </div>
                     <p className="text-[#6b7280] text-sm mb-4 font-medium">
-                        You have <strong className="text-white">{2 - applicationCount}</strong> applications remaining today.
+                        You have <strong className="text-white">{Math.max(0, DAILY_LIMIT - applicationCount)}</strong> applications remaining today.
                     </p>
                     <Link href="/dashboard/premium" className="bg-[#07da63] text-black font-bold w-full py-2 rounded-full hover:bg-[#08f26e] transition-colors flex items-center justify-center gap-2 text-sm">
                         <Sparkles size={16} /> Upgrade to Premium
@@ -155,9 +228,15 @@ export default function JobsPage() {
                 <div className="bg-[#0d0d0d] border border-[#1a1a1a] rounded-2xl p-4">
                     <h3 className="text-xl font-bold mb-4">Top Hiring Founders</h3>
                     <div className="space-y-4">
-                        <FounderItem name="Alex Rivera" handle="@alex" hires="12" img="https://i.pravatar.cc/150?u=alex" />
-                        <FounderItem name="Sarah Chen" handle="@sarah" hires="8" img="https://i.pravatar.cc/150?u=sarah" />
-                        <FounderItem name="Marcus T." handle="@marcus" hires="5" img="https://i.pravatar.cc/150?u=marcus" />
+                        {topFounders.map(founder => (
+                            <FounderItem
+                                key={founder.username}
+                                name={founder.username}
+                                handle={`@${founder.username}`}
+                                hires={Math.floor(founder.builder_score / 100)}
+                                img={founder.profiles?.profile_image || `https://i.pravatar.cc/150?u=${founder.username}`}
+                            />
+                        ))}
                     </div>
                 </div>
             </aside>

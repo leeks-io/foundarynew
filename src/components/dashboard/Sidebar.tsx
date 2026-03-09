@@ -9,8 +9,28 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
+import { useEffect, useState } from 'react'
+import { createClient } from '@/utils/supabase/client'
+
 export default function Sidebar() {
     const pathname = usePathname()
+    const [user, setUser] = useState<any>(null)
+    const supabase = createClient()
+
+    useEffect(() => {
+        const getUser = async () => {
+            const { data: { user: authUser } } = await supabase.auth.getUser()
+            if (authUser) {
+                const { data } = await supabase
+                    .from('users')
+                    .select('username, profiles(profile_image)')
+                    .eq('id', authUser.id)
+                    .single()
+                setUser(data)
+            }
+        }
+        getUser()
+    }, [supabase])
 
     const navItems = [
         { name: 'Home', href: '/dashboard', icon: Home },
@@ -82,11 +102,11 @@ export default function Sidebar() {
                 <div className="flex items-center justify-between p-3 rounded-full hover:bg-[#111111] transition-colors cursor-pointer group">
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-[#1a1a1a] border border-[#1a1a1a] overflow-hidden">
-                            <img src="https://i.pravatar.cc/150?u=david" alt="David" className="w-full h-full object-cover" />
+                            <img src={user?.profiles?.profile_image || `https://i.pravatar.cc/150?u=${user?.username}`} alt="Profile" className="w-full h-full object-cover" />
                         </div>
                         <div className="flex flex-col">
-                            <span className="text-white font-bold text-[15px] leading-tight group-hover:underline">David Park</span>
-                            <span className="text-[#6b7280] text-sm leading-tight">@davidbuilds</span>
+                            <span className="text-white font-bold text-[15px] leading-tight group-hover:underline">{user?.username || 'Loading...'}</span>
+                            <span className="text-[#6b7280] text-sm leading-tight">@{user?.username || 'foundry'}</span>
                         </div>
                     </div>
                     <MoreHorizontal size={18} className="text-[#6b7280]" />

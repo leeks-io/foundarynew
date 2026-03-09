@@ -4,22 +4,93 @@ import { motion } from 'framer-motion'
 import { CheckCircle2, Star, TrendingUp, Users, ArrowRight, Rocket, Briefcase, Zap, ShoppingCart, Lightbulb } from 'lucide-react'
 import Link from 'next/link'
 import Navbar from '@/components/layout/Navbar'
+import { useEffect, useState } from 'react'
+import { createClient } from '@/utils/supabase/client'
+
+interface Blueprint {
+  title: string
+  tags: string[]
+  price: string
+}
 
 export default function Home() {
-  const trendingBuilders = [
+  const [trendingBuilders, setTrendingBuilders] = useState<any[]>([])
+  const [featuredServices, setFeaturedServices] = useState<any[]>([])
+  const [blueprints, setBlueprints] = useState<Blueprint[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const supabase = createClient()
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true)
+      try {
+        // Fetch trending builders (top builder score)
+        const { data: builders } = await supabase
+          .from('users')
+          .select('id, username, role, builder_score, profiles(profile_image)')
+          .order('builder_score', { ascending: false })
+          .limit(4)
+
+        // Fetch featured services
+        const { data: services } = await supabase
+          .from('services')
+          .select('id, title, price_usdc, rating, images, user_id, users(username)')
+          .eq('is_active', true)
+          .limit(3)
+
+        // Fetch blueprint ideas
+        const { data: bprints } = await supabase
+          .from('blueprints')
+          .select('*')
+          .limit(2)
+
+        if (builders) setTrendingBuilders(builders.map(b => ({
+          name: b.username,
+          role: b.role,
+          score: b.builder_score,
+          img: (b.profiles as any)?.profile_image || `https://i.pravatar.cc/150?u=${b.username}`
+        })))
+
+        if (services) setFeaturedServices(services.map(s => ({
+          title: s.title,
+          provider: (s.users as any)?.username || "Unknown",
+          price: s.price_usdc,
+          rating: s.rating,
+          img: s.images?.[0] || `https://i.pravatar.cc/150?u=${s.id}`
+        })))
+
+        if (bprints) setBlueprints(bprints.map(bp => ({
+          title: bp.title,
+          tags: bp.tech_stack || [],
+          price: bp.price_usdc > 0 ? `${bp.price_usdc} USDC` : "Free"
+        })))
+
+      } catch (err) {
+        console.error("Error fetching homepage data:", err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [supabase])
+
+  // Fallback if no data yet (don't show empty sections if loading or no results)
+  const displayBuilders = trendingBuilders.length > 0 ? trendingBuilders : [
     { name: "Alex Rivera", role: "Fullstack Developer", score: 942, img: "https://i.pravatar.cc/150?u=alex" },
     { name: "Sarah Chen", role: "UI/UX Designer", score: 885, img: "https://i.pravatar.cc/150?u=sarah" },
     { name: "Marcus Thorne", role: "Smart Contract Engineer", score: 910, img: "https://i.pravatar.cc/150?u=marcus" },
     { name: "Elena Vogt", role: "AI Research Engineer", score: 867, img: "https://i.pravatar.cc/150?u=elena" },
   ]
 
-  const featuredServices = [
+  const displayServices = featuredServices.length > 0 ? featuredServices : [
     { title: "High-end Web3 Landing Page Design", provider: "Rivera Studio", price: 450, rating: 5.0, img: "https://i.pravatar.cc/150?u=1" },
     { title: "ERC-721 Smart Contract Audit", provider: "Thorne Security", price: 1200, rating: 4.9, img: "https://i.pravatar.cc/150?u=2" },
     { title: "Custom AI Agent Integration", provider: "Nexus AI", price: 800, rating: 5.0, img: "https://i.pravatar.cc/150?u=3" },
   ]
 
-  const blueprints = [
+  const displayBlueprints = blueprints.length > 0 ? blueprints : [
     { title: "AI Voice Note Summarizer", tags: ["SaaS", "AI"], price: "50 USDC" },
     { title: "On-chain Escrow for Freelancers", tags: ["DeFi", "Web3"], price: "Free" },
   ]
@@ -81,7 +152,7 @@ export default function Home() {
           </div>
 
           <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
-            {trendingBuilders.map((builder) => (
+            {displayBuilders.map((builder) => (
               <div key={builder.name} className="min-w-[280px] bg-[#0d0d0d] border border-[#1a1a1a] p-5 rounded-2xl flex flex-col items-center text-center group hover:border-[#07da63]/30 transition-all">
                 <div className="w-20 h-20 rounded-full border-2 border-[#1a1a1a] p-1 mb-4 group-hover:border-[#07da63] transition-all overflow-hidden">
                   <img src={builder.img} alt={builder.name} className="w-full h-full rounded-full object-cover" />
@@ -108,7 +179,7 @@ export default function Home() {
         <div className="max-w-[1200px] mx-auto">
           <h2 className="text-2xl font-bold mb-10">Services</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {featuredServices.map((service) => (
+            {displayServices.map((service) => (
               <div key={service.title} className="bg-[#0d0d0d] border border-[#1a1a1a] rounded-2xl overflow-hidden group hover:border-[#07da63] transition-all">
                 <div className="h-48 bg-[#111111] relative overflow-hidden">
                   <img src={`https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=800&q=80&u=${service.title}`} alt={service.title} className="w-full h-full object-cover opacity-50 transition-transform group-hover:scale-110" />
@@ -142,11 +213,11 @@ export default function Home() {
         <div className="max-w-[1200px] mx-auto">
           <h2 className="text-2xl font-bold mb-10">Blueprint Ideas</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {blueprints.map((idea) => (
+            {displayBlueprints.map((idea) => (
               <div key={idea.title} className="bg-[#0d0d0d] border border-[#1a1a1a] border-l-4 border-l-[#07da63] p-6 rounded-r-2xl">
                 <h3 className="text-xl font-bold mb-3">{idea.title}</h3>
                 <div className="flex gap-2 mb-6">
-                  {idea.tags.map(tag => (
+                  {idea.tags.map((tag: string) => (
                     <span key={tag} className="px-3 py-1 bg-[#111111] text-[10px] font-bold text-[#6b7280] uppercase tracking-widest rounded-md border border-[#1a1a1a]">{tag}</span>
                   ))}
                   <span className="ml-auto text-[#07da63] font-bold text-sm">{idea.price}</span>

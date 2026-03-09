@@ -1,13 +1,18 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CheckCircle2, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 
-export default function AuthPage({ searchParams }: { searchParams: { mode?: string, error?: string } }) {
-    const [view, setView] = useState<'login' | 'signup'>(searchParams.mode === 'signup' ? 'signup' : 'login')
+function AuthContent() {
+    const searchParams = useSearchParams()
+    const mode = searchParams.get('mode')
+    const errorParam = searchParams.get('error')
+
+    const [view, setView] = useState<'login' | 'signup'>(mode === 'signup' ? 'signup' : 'login')
     const [role, setRole] = useState<'jobseeker' | 'freelancer' | 'founder'>('freelancer')
 
     // Auth State
@@ -15,7 +20,7 @@ export default function AuthPage({ searchParams }: { searchParams: { mode?: stri
     const [password, setPassword] = useState('')
     const [fullName, setFullName] = useState('')
     const [loading, setLoading] = useState(false)
-    const [error, setError] = useState<string | null>(searchParams.error ? 'Authentication failed. Please try again.' : null)
+    const [error, setError] = useState<string | null>(errorParam ? 'Authentication failed. Please try again.' : null)
     const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
     const handleGoogleLogin = async () => {
@@ -243,6 +248,14 @@ export default function AuthPage({ searchParams }: { searchParams: { mode?: stri
                 </AnimatePresence>
             </motion.div>
         </div>
+    )
+}
+
+export default function AuthPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-black flex items-center justify-center text-[#07da63]">Loading...</div>}>
+            <AuthContent />
+        </Suspense>
     )
 }
 

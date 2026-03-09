@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
     Search, SlidersHorizontal, Sparkles, Filter,
@@ -9,20 +9,65 @@ import {
 import { cn } from '@/lib/utils'
 import ServiceCard from '@/components/marketplace/ServiceCard'
 import Link from 'next/link'
+import { createClient } from '@/utils/supabase/client'
 
 export default function ServicesPage() {
     const [selectedService, setSelectedService] = useState<any>(null)
     const [activeCategory, setActiveCategory] = useState('All')
+    const [services, setServices] = useState<any[]>([])
+    const [trendingServices, setTrendingServices] = useState<any[]>([])
+    const [topFreelancers, setTopFreelancers] = useState<any[]>([])
+    const [loading, setLoading] = useState(true)
+    const [searchQuery, setSearchQuery] = useState('')
 
+    const supabase = createClient()
     const categories = ['All', 'UI/UX Design', 'Web Dev', 'Smart Contracts', 'AI Tools', 'Marketing', 'Branding']
 
-    const services = [
-        { id: 1, title: "High-end Web3 Landing Page Design", provider: "Rivera Studio", price: 450, rating: 5.0, deliveryTime: 7, isPremium: true },
-        { id: 2, title: "ERC-721 Smart Contract Audit", provider: "Thorne Security", price: 1200, rating: 4.9, deliveryTime: 3, isPremium: true },
-        { id: 3, title: "Custom AI Agent Integration", provider: "Nexus AI", price: 800, rating: 5.0, deliveryTime: 5, isPremium: false },
-        { id: 4, title: "Viral Twitter Thread Ghostwriting", provider: "ContentGenix", price: 150, rating: 4.8, deliveryTime: 2, isPremium: false },
-        { id: 5, title: "Pitch Deck for VC Fundraising", provider: "StoryFoundry", price: 600, rating: 5.0, deliveryTime: 4, isPremium: true },
-        { id: 6, title: "Next.js Performance Optimization", provider: "TurboDev", price: 300, rating: 4.9, deliveryTime: 3, isPremium: false },
+    useEffect(() => {
+        const fetchData = async () => {
+            setLoading(true)
+
+            // Fetch Services
+            let query = supabase
+                .from('services')
+                .select('*, users(username, is_premium, profiles(profile_image))')
+                .eq('is_active', true)
+                .order('created_at', { ascending: false })
+
+            if (activeCategory !== 'All') {
+                query = query.eq('category', activeCategory)
+            }
+
+            const { data: servicesData } = await query
+
+            // Fetch Trending Services (mocking with rating for now)
+            const { data: trendingData } = await supabase
+                .from('services')
+                .select('title, price_usdc')
+                .eq('is_active', true)
+                .order('rating', { ascending: false })
+                .limit(3)
+
+            // Fetch Top Freelancers
+            const { data: freelancersData } = await supabase
+                .from('users')
+                .select('username, builder_score, profiles(profile_image)')
+                .eq('role', 'Talent')
+                .order('builder_score', { ascending: false })
+                .limit(2)
+
+            if (servicesData) setServices(servicesData)
+            if (trendingData) setTrendingServices(trendingData)
+            if (freelancersData) setTopFreelancers(freelancersData)
+            setLoading(false)
+        }
+
+        fetchData()
+    }, [supabase, activeCategory])
+
+    // Fallback if DB empty
+    const displayServices = services.length > 0 ? services : [
+        { id: '1', title: "High-end Web3 Landing Page Design", price_usdc: 450, rating: 5.0, delivery_days: 7, users: { username: "Rivera Studio", is_premium: true } }
     ]
 
     return (
@@ -81,15 +126,26 @@ export default function ServicesPage() {
 
                 {/* Services Grid */}
                 <div className="p-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                        {services.map(service => (
-                            <ServiceCard
-                                key={service.id}
-                                {...service}
-                                onClick={() => setSelectedService(service)}
-                            />
-                        ))}
-                    </div>
+                    {loading ? (
+                        <div className="p-8 text-center text-[#6b7280]">Loading services...</div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                            {displayServices.map(service => (
+                                <ServiceCard
+                                    key={service.id}
+                                    title={service.title}
+                                    provider={(service.users as any)?.username || "Unknown"}
+                                    price={service.price_usdc}
+                                    rating={service.rating || 5.0}
+                                    deliveryTime={service.delivery_days || 7}
+                                    image={service.images?.[0]}
+                                    avatar={(service.users as any)?.profiles?.profile_image}
+                                    isPremium={(service.users as any)?.is_premium}
+                                    onClick={() => setSelectedService(service)}
+                                />
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -98,17 +154,24 @@ export default function ServicesPage() {
                 <div className="bg-[#0d0d0d] border border-[#1a1a1a] rounded-2xl p-4">
                     <h3 className="text-xl font-bold mb-4">Trending Services</h3>
                     <div className="space-y-4">
-                        <TrendingService title="AI Chatbot Integration" price="400 USDC" />
-                        <TrendingService title="Solana NFT Mint Page" price="600 USDC" />
-                        <TrendingService title="Viral Content Strategy" price="200 USDC" />
+                        {trendingServices.map(ts => (
+                            <TrendingService key={ts.title} title={ts.title} price={`${ts.price_usdc} USDC`} />
+                        ))}
                     </div>
                 </div>
 
                 <div className="bg-[#0d0d0d] border border-[#1a1a1a] rounded-2xl p-4">
                     <h3 className="text-xl font-bold mb-4">Top Rated Freelancers</h3>
                     <div className="space-y-4">
-                        <FreelancerItem name="Elena V." handle="@elena" rating="5.0" img="https://i.pravatar.cc/150?img=44" />
-                        <FreelancerItem name="Marcus T." handle="@marcus" rating="4.9" img="https://i.pravatar.cc/150?img=12" />
+                        {topFreelancers.map(tf => (
+                            <FreelancerItem
+                                key={tf.username}
+                                name={tf.username}
+                                handle={`@${tf.username}`}
+                                rating="5.0"
+                                img={tf.profiles?.profile_image || `https://i.pravatar.cc/150?u=${tf.username}`}
+                            />
+                        ))}
                     </div>
                 </div>
             </aside>
@@ -143,12 +206,12 @@ export default function ServicesPage() {
 
                                 {/* Creator Header */}
                                 <div className="flex items-center gap-4 mb-8 p-4 bg-[#0d0d0d] rounded-2xl border border-[#1a1a1a]">
-                                    <img src={`https://i.pravatar.cc/150?u=${selectedService.provider}`} alt={selectedService.provider} className="w-14 h-14 rounded-full" />
+                                    <img src={(selectedService.users as any)?.profiles?.profile_image || `https://i.pravatar.cc/150?u=${selectedService.users?.username}`} alt={selectedService.users?.username} className="w-14 h-14 rounded-full" />
                                     <div>
                                         <p className="font-bold text-lg flex items-center gap-1">
-                                            {selectedService.provider} {selectedService.isPremium && <CheckCircle2 size={16} className="text-[#07da63]" />}
+                                            {selectedService.users?.username || "Unknown Builder"} {selectedService.users?.is_premium && <CheckCircle2 size={16} className="text-[#07da63]" />}
                                         </p>
-                                        <p className="text-[#6b7280] text-sm">Builder Score: 842 · Rank #12</p>
+                                        <p className="text-[#6b7280] text-sm">Builder Score: {selectedService.users?.builder_score || 0}</p>
                                     </div>
                                     <button className="ml-auto bg-white text-black font-bold px-4 py-1.5 rounded-full text-xs">Follow</button>
                                 </div>
@@ -156,7 +219,7 @@ export default function ServicesPage() {
                                 {/* Gallery Placeholder */}
                                 <div className="h-[300px] bg-[#111111] rounded-2xl mb-8 flex items-center justify-center border border-[#1a1a1a] overflow-hidden">
                                     <img
-                                        src={`https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=1200&q=80&u=${selectedService.title}`}
+                                        src={selectedService.images?.[0] || `https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=1200&q=80&u=${selectedService.title}`}
                                         className="w-full h-full object-cover opacity-60"
                                         alt="Service"
                                     />
@@ -170,13 +233,7 @@ export default function ServicesPage() {
                                 </div>
 
                                 <div className="text-[15px] leading-relaxed text-[#6b7280] font-medium space-y-4">
-                                    <p>I will provide professional Web3 landing page design services tailored for your dApp or NFT collection.</p>
-                                    <ul className="list-disc pl-5 space-y-2">
-                                        <li>Custom layout design in Figma</li>
-                                        <li>Responsive across all devices</li>
-                                        <li>Dark mode & high-end aesthetics</li>
-                                        <li>Source file delivery</li>
-                                    </ul>
+                                    <p>{selectedService.description || "No description provided."}</p>
                                 </div>
                             </div>
 
@@ -191,16 +248,16 @@ export default function ServicesPage() {
                                 <div className="flex-1">
                                     <div className="flex items-center justify-between mb-2">
                                         <h4 className="font-bold">Basic Package</h4>
-                                        <span className="text-2xl font-bold text-[#07da63]">{selectedService.price} USDC</span>
+                                        <span className="text-2xl font-bold text-[#07da63]">{selectedService.price_usdc} USDC</span>
                                     </div>
-                                    <p className="text-xs text-[#6b7280] font-medium mb-6">Single page landing design with mobile optimization.</p>
+                                    <p className="text-xs text-[#6b7280] font-medium mb-6">Foundry Escrow Protected Service.</p>
 
                                     <div className="space-y-4 mb-8">
                                         <div className="flex items-center gap-2 text-sm font-medium text-white">
-                                            <Clock size={16} className="text-[#07da63]" /> {selectedService.deliveryTime} Days Delivery
+                                            <Clock size={16} className="text-[#07da63]" /> {selectedService.delivery_days} Days Delivery
                                         </div>
                                         <div className="flex items-center gap-2 text-sm font-medium text-white">
-                                            <Zap size={16} className="text-[#07da63]" /> 3 Revisions
+                                            <Zap size={16} className="text-[#07da63]" /> Revision Included
                                         </div>
                                     </div>
                                 </div>
