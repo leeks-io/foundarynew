@@ -1,274 +1,520 @@
 'use client'
+
 export const dynamic = 'force-dynamic'
 
-import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import {
-    Briefcase, MapPin, DollarSign, Clock,
-    Search, Filter, ChevronRight, Zap,
-    Building2, Globe, Target, ArrowRight,
-    Bookmark, Rocket, Calendar, ArrowUpRight,
-    AlertTriangle, Sparkles, X, Users, CheckCircle2
-} from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { formatDistanceToNow } from 'date-fns'
-import { useAuth } from '@/hooks/useAuth'
-import { useJobs } from '@/hooks/useJobs'
-import { useJobSeekerStats } from '@/hooks/useDashboard'
-import { JobsSkeleton } from '@/components/skeletons/JobsSkeleton'
-import { EmptyJobs } from '@/components/empty/EmptyJobs'
+import { useEffect, useState, useCallback } from 'react'
 import { createSupabaseBrowserClient } from '@/utils/supabase/client'
-import Link from 'next/link'
+import type { JobWithPoster } from '@/types/database'
+import {
+    Search, MapPin, Clock, DollarSign, Briefcase,
+    Plus, Loader2, X, ChevronDown
+} from 'lucide-react'
+
+const JOB_TYPES = ['full-time', 'part-time', 'contract', 'freelance', 'internship'] as const
 
 export default function JobsPage() {
-    const [searchQuery, setSearchQuery] = useState('')
-    const [activeFilter, setActiveFilter] = useState('All')
-    const [showLimitModal, setShowLimitModal] = useState(false)
-    const { user: currentUser } = useAuth()
-    const { data: jobs, isLoading: jobsLoading } = useJobs({
-        search: searchQuery,
-        type: activeFilter
-    })
-    const { data: seekerStats } = useJobSeekerStats()
-    const applicationCount = seekerStats?.applications || 0
-    const DAILY_LIMIT = 2
+    const supabase = createSupabaseBrowserClient()
+    const [jobs, setJobs] = useState<JobWithPoster[]>([])
+    const [loading, setLoading] = useState(true)
+    const [search, setSearch] = useState('')
+    const [typeFilter, setTypeFilter] = useState<string>('all')
+    const [remoteOnly, setRemoteOnly] = useState(false)
+    const [selectedJob, setSelectedJob] = useState<JobWithPoster | null>(null)
+    const [showPostModal, setShowPostModal] = useState(false)
+    const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+    const [applying, setApplying] = useState(false)
+    const [applied, setApplied] = useState<Set<string>>(new Set())
 
-    // We can use a simple query for top founders here as well
-    const { data: topFounders } = useJobs()
+    useEffect(() => {
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            setCurrentUserId(session?.user.id ?? null)
+            if (session?.user.id) {
+                supabase
+                    .from('job_applications')
+                    .select('job_id')
+                    .eq('applicant_id', session.user.id)
+                    .then(({ data }) => {
+                        setApplied(new Set(data?.map(a => a.job_id) ?? []))
+                    })
+            }
+        })
+    }, [])
+
+    const fetchJobs = useCallback(async () => {
+        setLoading(true)
+        let query = supabase
+            .from('jobs')
+            .select('*, profiles(*)')
+            .eq('is_active', true)
+            .order('created_at', { ascending: false })
+            .limit(50)
+
+        if (typeFilter !== 'all') query = query.eq('type', typeFilter)
+        if (remoteOnly) query = query.eq('is_remote', true)
+        if (search.trim()) {
+            query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%,company.ilike.%${search}%`)
+        }
+
+        const { data } = await query
+        setJobs((data as JobWithPoster[]) ?? [])
+        setLoading(false)
+    }, [typeFilter, remoteOnly, search])
+
+    useEffect(() => {
+        const timer = setTimeout(fetchJobs, 300)
+        return () => clearTimeout(timer)
+    }, [fetchJobs])
 
     const handleApply = async (jobId: string) => {
-        const supabase = createSupabaseBrowserClient()
-        if (!currentUser) return // Should redirect to auth or show message
-
-        if (applicationCount >= DAILY_LIMIT && !currentUser?.user_metadata?.is_premium) {
-            setShowLimitModal(true)
-        } else {
-            const { error } = await supabase
-                .from('applications')
-                .insert({
-                    job_id: jobId,
-                    applicant_id: currentUser.id,
-                    status: 'pending'
-                })
-
-            if (!error) {
-                alert("Application sent successfully!")
-            } else if (error.code === '23505') {
-                alert("You have already applied for this job.")
-            } else {
-                alert("Error sending application: " + error.message)
-            }
-        }
+        if (!currentUserId || applying) return
+        setApplying(true)
+        await supabase.from('job_applications').insert({
+            job_id: jobId,
+            applicant_id: currentUserId,
+        })
+        setApplied(prev => new Set(prev).add(jobId))
+        setApplying(false)
     }
 
-    const filters = ['All', 'Remote', 'Full-time', 'Part-time', 'Contract', 'Web3', 'AI', 'Design', 'Dev']
-
-
     return (
-        <div className="flex flex-1 min-w-0">
-            {/* Left: Job Listings Feed (65%) */}
-            <div className="flex-[0.65] min-w-0 border-r border-[#1a1a1a]">
-                {/* Sticky Top Bar */}
-                <div className="sticky top-[60px] z-30 bg-black/80 backdrop-blur-md border-b border-[#1a1a1a]">
-                    <div className="px-4 py-3 flex items-center justify-between">
-                        <h2 className="text-xl font-bold">Jobs</h2>
-                        <button className="bg-[#07da63] text-black font-bold px-5 py-1.5 rounded-full hover:bg-[#08f26e] transition-colors text-sm">
-                            + Post a Job
+        <div className="min-h-full bg-zinc-900">
+            {/* Header */}
+            <div className="sticky top-0 z-10 bg-zinc-900/95 backdrop-blur border-b border-zinc-800 px-4 sm:px-6 py-4">
+                <div className="max-w-6xl mx-auto space-y-3">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h1 className="text-xl font-semibold text-white">Jobs</h1>
+                            <p className="text-sm text-zinc-400">Find your next opportunity</p>
+                        </div>
+                        {currentUserId && (
+                            <button
+                                onClick={() => setShowPostModal(true)}
+                                className="flex items-center gap-2 px-3 py-2 bg-white text-black rounded-lg text-sm font-medium hover:bg-zinc-200 transition-colors"
+                            >
+                                <Plus className="w-4 h-4" />
+                                <span className="hidden sm:inline">Post a Job</span>
+                            </button>
+                        )}
+                    </div>
+
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                        <input
+                            type="text"
+                            placeholder="Search jobs, companies, skills..."
+                            value={search}
+                            onChange={e => setSearch(e.target.value)}
+                            className="w-full pl-9 pr-4 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-500"
+                        />
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                        <div className="flex gap-1 overflow-x-auto pb-1 scrollbar-hide">
+                            {['all', ...JOB_TYPES].map(type => (
+                                <button
+                                    key={type}
+                                    onClick={() => setTypeFilter(type)}
+                                    className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors capitalize ${typeFilter === type
+                                            ? 'bg-white text-black'
+                                            : 'bg-zinc-800 text-zinc-400 hover:text-white'
+                                        }`}
+                                >
+                                    {type === 'all' ? 'All Types' : type}
+                                </button>
+                            ))}
+                        </div>
+                        <button
+                            onClick={() => setRemoteOnly(!remoteOnly)}
+                            className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${remoteOnly ? 'bg-white text-black' : 'bg-zinc-800 text-zinc-400 hover:text-white'
+                                }`}
+                        >
+                            Remote only
                         </button>
                     </div>
-                    <div className="px-4 pb-3">
-                        <div className="relative group">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#6b7280] group-focus-within:text-[#07da63]" size={18} />
-                            <input
-                                type="text"
-                                placeholder="Search jobs, skills..."
-                                className="w-full bg-[#16181c] border-none rounded-full py-2 pl-12 pr-4 text-sm focus:outline-none focus:ring-1 focus:ring-[#07da63] placeholder:text-[#6b7280]"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                            />
-                        </div>
-                    </div>
-                    {/* Filter Chips */}
-                    <div className="flex gap-2 overflow-x-auto px-4 pb-3 no-scrollbar">
-                        {filters.map(filter => (
-                            <button
-                                key={filter}
-                                onClick={() => setActiveFilter(filter)}
-                                className={cn(
-                                    "px-4 py-1.5 rounded-full border text-xs font-bold whitespace-nowrap transition-all",
-                                    activeFilter === filter
-                                        ? "bg-[#07da63]/10 border-[#07da63] text-[#07da63]"
-                                        : "border-[#1a1a1a] text-[#6b7280] hover:bg-white/5 hover:text-white"
-                                )}
-                            >
-                                {filter}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                <div className="divide-y divide-[#1a1a1a]">
-                    {jobsLoading ? (
-                        <div className="p-4">
-                            <JobsSkeleton />
-                        </div>
-                    ) : (
-                        jobs && jobs.length > 0 ? jobs.map((job: any) => (
-                            <div key={job.id} className="p-5 hover:bg-[#080808] transition-colors group cursor-pointer flex gap-4">
-                                <div className="w-12 h-12 rounded-xl bg-[#111111] border border-[#1a1a1a] flex items-center justify-center font-bold text-xl text-[#07da63] shrink-0 overflow-hidden">
-                                    {job.users?.profiles?.profile_image ? (
-                                        <img src={job.users.profiles.profile_image} className="w-full h-full object-cover" alt="Logo" />
-                                    ) : (
-                                        job.company_name?.[0] || '⬡'
-                                    )}
-                                </div>
-                                <div className="flex-1">
-                                    <div className="flex justify-between items-start mb-1">
-                                        <div>
-                                            <h3 className="font-bold text-lg group-hover:underline">{job.title}</h3>
-                                            <p className="text-[#6b7280] text-sm font-medium">{job.company_name} @{job.users?.username || 'anon'}</p>
-                                        </div>
-                                        <button className="text-[#6b7280] hover:text-[#07da63] transition-colors p-2 rounded-full hover:bg-[#07da63]/10">
-                                            <Bookmark size={18} />
-                                        </button>
-                                    </div>
-
-                                    <div className="flex flex-wrap gap-x-4 gap-y-1 my-3 text-[#6b7280] text-xs font-bold uppercase tracking-wider">
-                                        <div className="flex items-center gap-1"><MapPin size={12} /> {job.is_remote ? 'Remote' : 'On-site'}</div>
-                                        <div className="flex items-center gap-1"><Rocket size={12} /> {job.job_type}</div>
-                                        <div className="flex items-center gap-1"><Calendar size={12} /> {formatDistanceToNow(new Date(job.created_at), { addSuffix: true })}</div>
-                                    </div>
-
-                                    <div className="flex items-center justify-between mt-4">
-                                        <div className="text-xl font-bold text-[#07da63]">{job.budget} <span className="text-[10px] text-[#6b7280] uppercase">USDC</span></div>
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); handleApply(job.id); }}
-                                            className="bg-transparent border border-[#07da63] text-[#07da63] font-bold px-6 py-1.5 rounded-lg hover:bg-[#07da63]/10 transition-colors text-sm flex items-center gap-2"
-                                        >
-                                            Apply Now <ArrowUpRight size={16} />
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        )) : (
-                            <EmptyJobs />
-                        )
-                    )}
                 </div>
             </div>
 
-            {/* Right: Panels (35%) */}
-            <aside className="hidden xl:block flex-[0.35] h-screen sticky top-[60px] p-4 space-y-4">
-                {/* Your Applications */}
-                <div className="bg-[#0d0d0d] border border-[#1a1a1a] rounded-2xl p-4">
-                    <h3 className="text-xl font-bold mb-4">Your Applications</h3>
-                    <div className="grid grid-cols-3 gap-2 mb-4">
-                        <div className="text-center p-2 rounded-xl bg-[#111111] border border-[#1a1a1a]">
-                            <p className="text-xl font-bold text-white">{applicationCount}</p>
-                            <p className="text-[10px] text-[#6b7280] font-bold uppercase">Applied</p>
-                        </div>
-                        <div className="text-center p-2 rounded-xl bg-[#111111] border border-[#1a1a1a]">
-                            <p className="text-xl font-bold text-white">-</p>
-                            <p className="text-[10px] text-[#6b7280] font-bold uppercase">Interviews</p>
-                        </div>
-                        <div className="text-center p-2 rounded-xl bg-[#111111] border border-[#1a1a1a]">
-                            <p className="text-xl font-bold text-white">-</p>
-                            <p className="text-[10px] text-[#6b7280] font-bold uppercase">Saved</p>
-                        </div>
+            {/* Content */}
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+                {loading ? (
+                    <div className="flex items-center justify-center py-20">
+                        <Loader2 className="w-6 h-6 text-zinc-500 animate-spin" />
                     </div>
-                    <Link href="#" className="text-[#07da63] text-sm font-bold hover:underline block text-center py-1">View All Applications →</Link>
-                </div>
-
-                {/* Free Tier Notice */}
-                <div className="bg-[#0d0d0d] border border-yellow-500/20 rounded-2xl p-4">
-                    <div className="flex items-center gap-2 mb-2 text-yellow-500">
-                        <AlertTriangle size={18} />
-                        <h4 className="font-bold text-sm">Free Tier Notice</h4>
-                    </div>
-                    <p className="text-[#6b7280] text-sm mb-4 font-medium">
-                        You have <strong className="text-white">{Math.max(0, DAILY_LIMIT - applicationCount)}</strong> applications remaining today.
-                    </p>
-                    <Link href="/dashboard/premium" className="bg-[#07da63] text-black font-bold w-full py-2 rounded-full hover:bg-[#08f26e] transition-colors flex items-center justify-center gap-2 text-sm">
-                        <Sparkles size={16} /> Upgrade to Premium
-                    </Link>
-                </div>
-
-                {/* Top Hiring Founders */}
-                <div className="bg-[#0d0d0d] border border-[#1a1a1a] rounded-2xl p-4">
-                    <h3 className="text-xl font-bold mb-4">Top Hiring Founders</h3>
-                    <div className="space-y-4">
-                        {topFounders && topFounders.length > 0 ? topFounders.map((founder: any) => (
-                            <FounderItem
-                                key={founder.username}
-                                name={founder.username}
-                                handle={`@${founder.username}`}
-                                hires={Math.floor(founder.builder_score / 100)}
-                                img={founder.profiles?.profile_image || `https://i.pravatar.cc/150?u=${founder.username}`}
-                            />
-                        )) : (
-                            <p className="text-xs text-[#6b7280] py-2">No hiring data yet.</p>
+                ) : jobs.length === 0 ? (
+                    <div className="text-center py-20">
+                        <Briefcase className="w-10 h-10 text-zinc-700 mx-auto mb-3" />
+                        <p className="text-zinc-500 text-sm">No jobs found</p>
+                        {currentUserId && (
+                            <button
+                                onClick={() => setShowPostModal(true)}
+                                className="mt-4 px-4 py-2 bg-white text-black rounded-lg text-sm font-medium hover:bg-zinc-200"
+                            >
+                                Post the first job
+                            </button>
                         )}
                     </div>
-                </div>
-            </aside>
-
-            {/* Limit Modal */}
-            <AnimatePresence>
-                {showLimitModal && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-                            onClick={() => setShowLimitModal(false)}
-                        />
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            className="w-full max-w-[400px] bg-black border border-[#1a1a1a] rounded-2xl p-8 relative z-[101] text-center"
-                        >
-                            <div className="flex justify-center mb-6">
-                                <div className="w-16 h-16 bg-yellow-500/10 rounded-full flex items-center justify-center text-yellow-500">
-                                    <AlertTriangle size={32} />
-                                </div>
-                            </div>
-                            <h2 className="text-2xl font-bold mb-4">You've reached your daily limit</h2>
-                            <p className="text-[#6b7280] mb-8 font-medium">
-                                Free users are limited to 2 applications per day. Upgrade to Premium for unlimited applications and priority access.
-                            </p>
-                            <div className="space-y-3">
-                                <Link href="/dashboard/premium" className="block bg-[#07da63] text-black font-bold w-full py-3 rounded-full hover:bg-[#08f26e] transition-colors">
-                                    Get Premium — $5 USDC
-                                </Link>
-                                <button
-                                    onClick={() => setShowLimitModal(false)}
-                                    className="block w-full text-[#6b7280] font-bold py-2 hover:text-white transition-colors"
-                                >
-                                    Maybe later
-                                </button>
-                            </div>
-                        </motion.div>
+                ) : (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        {jobs.map(job => (
+                            <JobCard
+                                key={job.id}
+                                job={job}
+                                isApplied={applied.has(job.id)}
+                                isApplying={applying}
+                                showApply={!!currentUserId && job.poster_id !== currentUserId}
+                                onApply={() => handleApply(job.id)}
+                                onClick={() => setSelectedJob(job)}
+                            />
+                        ))}
                     </div>
                 )}
-            </AnimatePresence>
+            </div>
+
+            {/* Job detail modal */}
+            {selectedJob && (
+                <JobDetailModal
+                    job={selectedJob}
+                    isApplied={applied.has(selectedJob.id)}
+                    isApplying={applying}
+                    showApply={!!currentUserId && selectedJob.poster_id !== currentUserId}
+                    onApply={() => handleApply(selectedJob.id)}
+                    onClose={() => setSelectedJob(null)}
+                />
+            )}
+
+            {/* Post job modal */}
+            {showPostModal && currentUserId && (
+                <PostJobModal
+                    userId={currentUserId}
+                    onClose={() => setShowPostModal(false)}
+                    onPosted={() => { setShowPostModal(false); fetchJobs() }}
+                />
+            )}
         </div>
     )
 }
 
-function FounderItem({ name, handle, hires, img }: any) {
+function JobCard({
+    job, isApplied, isApplying, showApply, onApply, onClick
+}: {
+    job: JobWithPoster
+    isApplied: boolean
+    isApplying: boolean
+    showApply: boolean
+    onApply: () => void
+    onClick: () => void
+}) {
     return (
-        <div className="flex items-center justify-between group cursor-pointer">
-            <div className="flex items-center gap-3">
-                <img src={img} alt={name} className="w-10 h-10 rounded-full" />
+        <div
+            onClick={onClick}
+            className="bg-zinc-800/50 border border-zinc-700/50 rounded-xl p-4 cursor-pointer hover:border-zinc-600 transition-colors space-y-3"
+        >
+            <div className="flex items-start justify-between gap-2">
                 <div>
-                    <p className="font-bold text-[15px] group-hover:underline leading-tight">{name}</p>
-                    <p className="text-[#6b7280] text-sm leading-tight">{handle}</p>
+                    <h3 className="text-white font-medium text-sm">{job.title}</h3>
+                    <p className="text-zinc-400 text-xs mt-0.5">{job.company || job.profiles?.full_name}</p>
+                </div>
+                <span className={`shrink-0 px-2 py-0.5 rounded-full text-xs font-medium capitalize ${job.type === 'full-time' ? 'bg-blue-500/20 text-blue-400' :
+                        job.type === 'contract' ? 'bg-purple-500/20 text-purple-400' :
+                            job.type === 'freelance' ? 'bg-orange-500/20 text-orange-400' :
+                                'bg-zinc-700 text-zinc-400'
+                    }`}>
+                    {job.type}
+                </span>
+            </div>
+
+            <p className="text-zinc-500 text-xs leading-relaxed line-clamp-2">{job.description}</p>
+
+            {job.skills && job.skills.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                    {job.skills.slice(0, 4).map(s => (
+                        <span key={s} className="px-2 py-0.5 bg-zinc-700/60 text-zinc-400 rounded text-xs">{s}</span>
+                    ))}
+                </div>
+            )}
+
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3 text-zinc-500 text-xs">
+                    {(job.location || job.is_remote) && (
+                        <span className="flex items-center gap-1">
+                            <MapPin className="w-3 h-3" />
+                            {job.is_remote ? 'Remote' : job.location}
+                        </span>
+                    )}
+                    {(job.salary_min || job.salary_max) && (
+                        <span className="flex items-center gap-1">
+                            <DollarSign className="w-3 h-3" />
+                            {job.salary_min && job.salary_max
+                                ? `${(job.salary_min / 1000).toFixed(0)}k–${(job.salary_max / 1000).toFixed(0)}k`
+                                : job.salary_min
+                                    ? `${(job.salary_min / 1000).toFixed(0)}k+`
+                                    : `up to ${(job.salary_max! / 1000).toFixed(0)}k`}
+                        </span>
+                    )}
+                </div>
+
+                {showApply && (
+                    <button
+                        onClick={e => { e.stopPropagation(); onApply() }}
+                        disabled={isApplied || isApplying}
+                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${isApplied
+                                ? 'bg-zinc-700 text-zinc-500 cursor-default'
+                                : 'bg-white text-black hover:bg-zinc-200'
+                            }`}
+                    >
+                        {isApplied ? 'Applied' : 'Apply'}
+                    </button>
+                )}
+            </div>
+        </div>
+    )
+}
+
+function JobDetailModal({
+    job, isApplied, isApplying, showApply, onApply, onClose
+}: {
+    job: JobWithPoster
+    isApplied: boolean
+    isApplying: boolean
+    showApply: boolean
+    onApply: () => void
+    onClose: () => void
+}) {
+    return (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+            <div className="fixed inset-0 bg-black/70" onClick={onClose} />
+            <div className="relative z-10 w-full sm:max-w-2xl bg-zinc-900 border border-zinc-700 rounded-t-2xl sm:rounded-2xl max-h-[90vh] overflow-y-auto">
+                <div className="sticky top-0 bg-zinc-900 border-b border-zinc-800 px-6 py-4 flex items-start justify-between">
+                    <div>
+                        <h2 className="text-white font-semibold">{job.title}</h2>
+                        <p className="text-zinc-400 text-sm">{job.company || job.profiles?.full_name}</p>
+                    </div>
+                    <button onClick={onClose} className="text-zinc-500 hover:text-white ml-4 shrink-0">
+                        <X className="w-5 h-5" />
+                    </button>
+                </div>
+
+                <div className="p-6 space-y-6">
+                    {/* Meta */}
+                    <div className="flex flex-wrap gap-3 text-sm text-zinc-400">
+                        <span className="capitalize px-2 py-1 bg-zinc-800 rounded">{job.type}</span>
+                        {job.is_remote && <span className="px-2 py-1 bg-zinc-800 rounded">Remote</span>}
+                        {job.location && (
+                            <span className="flex items-center gap-1 px-2 py-1 bg-zinc-800 rounded">
+                                <MapPin className="w-3 h-3" />{job.location}
+                            </span>
+                        )}
+                        {(job.salary_min || job.salary_max) && (
+                            <span className="flex items-center gap-1 px-2 py-1 bg-zinc-800 rounded">
+                                <DollarSign className="w-3 h-3" />
+                                {job.salary_min && job.salary_max
+                                    ? `$${job.salary_min.toLocaleString()} – $${job.salary_max.toLocaleString()}`
+                                    : job.salary_min
+                                        ? `From $${job.salary_min.toLocaleString()}`
+                                        : `Up to $${job.salary_max!.toLocaleString()}`}
+                            </span>
+                        )}
+                    </div>
+
+                    {/* Description */}
+                    <div>
+                        <h3 className="text-white font-medium mb-2 text-sm">About this role</h3>
+                        <p className="text-zinc-400 text-sm leading-relaxed whitespace-pre-wrap">{job.description}</p>
+                    </div>
+
+                    {/* Skills */}
+                    {job.skills && job.skills.length > 0 && (
+                        <div>
+                            <h3 className="text-white font-medium mb-2 text-sm">Skills required</h3>
+                            <div className="flex flex-wrap gap-2">
+                                {job.skills.map(s => (
+                                    <span key={s} className="px-3 py-1 bg-zinc-800 text-zinc-300 rounded-full text-sm">{s}</span>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Posted by */}
+                    {job.profiles && (
+                        <div className="flex items-center gap-3 p-3 bg-zinc-800/50 rounded-xl">
+                            {job.profiles.avatar_url ? (
+                                <img src={job.profiles.avatar_url} alt="" className="w-9 h-9 rounded-full object-cover" />
+                            ) : (
+                                <div className="w-9 h-9 rounded-full bg-zinc-700 flex items-center justify-center">
+                                    <span className="text-xs text-zinc-300">
+                                        {job.profiles.full_name?.[0] ?? '?'}
+                                    </span>
+                                </div>
+                            )}
+                            <div>
+                                <p className="text-white text-sm font-medium">{job.profiles.full_name}</p>
+                                <p className="text-zinc-500 text-xs">Posted this job</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {showApply && (
+                        <button
+                            onClick={onApply}
+                            disabled={isApplied || isApplying}
+                            className={`w-full py-3 rounded-xl font-medium transition-colors ${isApplied
+                                    ? 'bg-zinc-700 text-zinc-500 cursor-default'
+                                    : 'bg-white text-black hover:bg-zinc-200'
+                                }`}
+                        >
+                            {isApplying ? (
+                                <Loader2 className="w-4 h-4 animate-spin mx-auto" />
+                            ) : isApplied ? (
+                                'Application Submitted'
+                            ) : (
+                                'Apply Now'
+                            )}
+                        </button>
+                    )}
                 </div>
             </div>
-            <div className="text-right">
-                <span className="text-xs font-bold text-[#07da63]">{hires} Hires</span>
+        </div>
+    )
+}
+
+function PostJobModal({
+    userId, onClose, onPosted
+}: {
+    userId: string
+    onClose: () => void
+    onPosted: () => void
+}) {
+    const supabase = createSupabaseBrowserClient()
+    const [form, setForm] = useState({
+        title: '', company: '', description: '', location: '',
+        type: 'full-time' as typeof JOB_TYPES[number],
+        salary_min: '', salary_max: '', skills: '', is_remote: false
+    })
+    const [posting, setPosting] = useState(false)
+    const [error, setError] = useState('')
+
+    const handlePost = async () => {
+        if (!form.title.trim() || !form.description.trim()) {
+            setError('Title and description are required.')
+            return
+        }
+        setPosting(true)
+        const { error: err } = await supabase.from('jobs').insert({
+            poster_id: userId,
+            title: form.title,
+            company: form.company || null,
+            description: form.description,
+            location: form.location || null,
+            type: form.type,
+            salary_min: form.salary_min ? parseInt(form.salary_min) : null,
+            salary_max: form.salary_max ? parseInt(form.salary_max) : null,
+            skills: form.skills ? form.skills.split(',').map(s => s.trim()).filter(Boolean) : [],
+            is_remote: form.is_remote,
+        })
+        if (err) { setError(err.message); setPosting(false); return }
+        onPosted()
+    }
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+            <div className="fixed inset-0 bg-black/70" onClick={onClose} />
+            <div className="relative z-10 w-full sm:max-w-xl bg-zinc-900 border border-zinc-700 rounded-t-2xl sm:rounded-2xl max-h-[90vh] overflow-y-auto">
+                <div className="sticky top-0 bg-zinc-900 border-b border-zinc-800 px-6 py-4 flex items-center justify-between">
+                    <h2 className="text-white font-semibold">Post a Job</h2>
+                    <button onClick={onClose}><X className="w-5 h-5 text-zinc-500 hover:text-white" /></button>
+                </div>
+
+                <div className="p-6 space-y-4">
+                    {error && <p className="text-red-400 text-sm">{error}</p>}
+
+                    {[
+                        { key: 'title', label: 'Job Title *', placeholder: 'e.g. Senior React Developer' },
+                        { key: 'company', label: 'Company', placeholder: 'Your company name' },
+                        { key: 'location', label: 'Location', placeholder: 'e.g. San Francisco, CA' },
+                    ].map(({ key, label, placeholder }) => (
+                        <div key={key}>
+                            <label className="block text-xs font-medium text-zinc-400 mb-1">{label}</label>
+                            <input
+                                type="text"
+                                placeholder={placeholder}
+                                value={(form as any)[key]}
+                                onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
+                                className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-500"
+                            />
+                        </div>
+                    ))}
+
+                    <div>
+                        <label className="block text-xs font-medium text-zinc-400 mb-1">Job Type</label>
+                        <select
+                            value={form.type}
+                            onChange={e => setForm(f => ({ ...f, type: e.target.value as any }))}
+                            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-white focus:outline-none focus:border-zinc-500"
+                        >
+                            {JOB_TYPES.map(t => (
+                                <option key={t} value={t} className="capitalize">{t}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                        {[
+                            { key: 'salary_min', label: 'Min Salary ($)', placeholder: '50000' },
+                            { key: 'salary_max', label: 'Max Salary ($)', placeholder: '100000' },
+                        ].map(({ key, label, placeholder }) => (
+                            <div key={key}>
+                                <label className="block text-xs font-medium text-zinc-400 mb-1">{label}</label>
+                                <input
+                                    type="number"
+                                    placeholder={placeholder}
+                                    value={(form as any)[key]}
+                                    onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
+                                    className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-500"
+                                />
+                            </div>
+                        ))}
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-medium text-zinc-400 mb-1">Skills (comma-separated)</label>
+                        <input
+                            type="text"
+                            placeholder="React, TypeScript, Node.js"
+                            value={form.skills}
+                            onChange={e => setForm(f => ({ ...f, skills: e.target.value }))}
+                            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-500"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-medium text-zinc-400 mb-1">Description *</label>
+                        <textarea
+                            rows={4}
+                            placeholder="Describe the role, requirements, and what you're looking for..."
+                            value={form.description}
+                            onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-500 resize-none"
+                        />
+                    </div>
+
+                    <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={form.is_remote}
+                            onChange={e => setForm(f => ({ ...f, is_remote: e.target.checked }))}
+                            className="w-4 h-4 rounded accent-white"
+                        />
+                        <span className="text-sm text-zinc-300">Remote position</span>
+                    </label>
+
+                    <button
+                        onClick={handlePost}
+                        disabled={posting}
+                        className="w-full py-3 bg-white text-black rounded-xl font-medium hover:bg-zinc-200 transition-colors disabled:opacity-50"
+                    >
+                        {posting ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Post Job'}
+                    </button>
+                </div>
             </div>
         </div>
     )

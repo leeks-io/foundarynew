@@ -1,105 +1,106 @@
 'use client'
-export const dynamic = 'force-dynamic'
 
-import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import {
-    Heart, Repeat, UserPlus, Zap, MessageSquare,
-    Settings, CheckCircle2, Star, DollarSign, Bell
-} from 'lucide-react'
-import { cn } from '@/lib/utils'
-import Link from 'next/link'
-import { useNotifications } from '@/hooks/useNotifications'
-import { formatDistanceToNow } from 'date-fns'
+import { useEffect, useState } from 'react'
 import { createSupabaseBrowserClient } from '@/utils/supabase/client'
+import type { Notification } from '@/types/database'
+import { Bell, Loader2, CheckCheck } from 'lucide-react'
+import { formatDistanceToNow } from 'date-fns'
 
 export default function NotificationsPage() {
-    const [activeTab, setActiveTab] = useState('all')
+    const supabase = createSupabaseBrowserClient()
+    const [notifications, setNotifications] = useState<Notification[]>([])
+    const [loading, setLoading] = useState(true)
+    const [userId, setUserId] = useState<string | null>(null)
 
-    const tabs = [
-        { id: 'all', label: 'All' },
-        { id: 'verified', label: 'Verified' },
-        { id: 'mentions', label: 'Mentions' },
-    ]
-
-    const { data: notifications, isLoading, markAsRead } = useNotifications()
-
-    const getIcon = (type: string) => {
-        switch (type) {
-            case 'like': return <Heart size={20} className="text-pink-500 fill-pink-500" />
-            case 'deal': return <Zap size={20} className="text-[#07da63] fill-[#07da63]" />
-            case 'follow': return <UserPlus size={20} className="text-[#07da63]" />
-            case 'repost': return <Repeat size={20} className="text-blue-500" />
-            default: return <Bell size={20} className="text-[#07da63]" />
+    useEffect(() => {
+        const load = async () => {
+            const { data: { session } } = await supabase.auth.getSession()
+            if (!session) return
+            setUserId(session.user.id)
+            const { data } = await supabase
+                .from('notifications')
+                .select('*')
+                .eq('user_id', session.user.id)
+                .order('created_at', { ascending: false })
+                .limit(50)
+            setNotifications(data ?? [])
+            setLoading(false)
         }
+        load()
+    }, [])
+
+    const markAllRead = async () => {
+        if (!userId) return
+        await supabase
+            .from('notifications')
+            .update({ is_read: true })
+            .eq('user_id', userId)
+            .eq('is_read', false)
+        setNotifications(prev => prev.map(n => ({ ...n, is_read: true })))
     }
 
+    const markRead = async (id: string) => {
+        await supabase.from('notifications').update({ is_read: true }).eq('id', id)
+        setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n))
+    }
+
+    const unreadCount = notifications.filter(n => !n.is_read).length
+
     return (
-        <div className="flex flex-col flex-1 min-w-0">
-            {/* Sticky Top Bar */}
-            <div className="sticky top-[60px] z-30 bg-black/80 backdrop-blur-md border-b border-[#1a1a1a]">
-                <div className="px-4 py-3 flex items-center justify-between">
-                    <h2 className="text-xl font-bold">Notifications</h2>
-                    <button className="p-2 hover:bg-[#1a1a1a] rounded-full transition-colors"><Settings size={20} /></button>
-                </div>
-                <div className="flex">
-                    {tabs.map(tab => (
+        <div className="min-h-full bg-zinc-900">
+            <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6">
+                <div className="flex items-center justify-between mb-6">
+                    <div>
+                        <h1 className="text-xl font-semibold text-white">Notifications</h1>
+                        {unreadCount > 0 && (
+                            <p className="text-sm text-zinc-400">{unreadCount} unread</p>
+                        )}
+                    </div>
+                    {unreadCount > 0 && (
                         <button
-                            key={tab.id}
-                            onClick={() => setActiveTab(tab.id)}
-                            className="flex-1 py-4 hover:bg-[#111111] transition-all relative group"
+                            onClick={markAllRead}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-zinc-800 text-zinc-300 rounded-lg text-sm hover:bg-zinc-700"
                         >
-                            <span className={cn("text-[15px] px-2", activeTab === tab.id ? "font-bold text-white" : "font-medium text-[#6b7280]")}>
-                                {tab.label}
-                            </span>
-                            {activeTab === tab.id && <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-[#07da63] rounded-full" />}
+                            <CheckCheck className="w-4 h-4" />
+                            Mark all read
                         </button>
-                    ))}
+                    )}
                 </div>
-            </div>
 
-            {/* Notifications Feed */}
-            <div className="divide-y divide-[#1a1a1a]">
-                {isLoading ? (
-                    <div className="p-8 text-center text-[#6b7280]">Loading notifications...</div>
+                {loading ? (
+                    <div className="flex items-center justify-center py-20">
+                        <Loader2 className="w-6 h-6 text-zinc-500 animate-spin" />
+                    </div>
+                ) : notifications.length === 0 ? (
+                    <div className="text-center py-20">
+                        <Bell className="w-10 h-10 text-zinc-700 mx-auto mb-3" />
+                        <p className="text-zinc-500 text-sm">No notifications yet</p>
+                    </div>
                 ) : (
-                    <AnimatePresence mode="popLayout">
-                        {notifications?.map((notif: any) => (
-                            <motion.div
-                                key={notif.id}
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                onClick={() => !notif.is_read && markAsRead(notif.id)}
-                                className={cn(
-                                    "p-4 hover:bg-[#080808] transition-colors cursor-pointer flex gap-3 group",
-                                    !notif.is_read ? "bg-[#07da63]/5" : ""
-                                )}
+                    <div className="space-y-1">
+                        {notifications.map(n => (
+                            <div
+                                key={n.id}
+                                onClick={() => !n.is_read && markRead(n.id)}
+                                className={`flex items-start gap-3 p-4 rounded-xl cursor-pointer transition-colors ${n.is_read ? 'bg-transparent hover:bg-zinc-800/30' : 'bg-zinc-800/60 hover:bg-zinc-800'
+                                    }`}
                             >
-                                <div className="shrink-0 pt-1">
-                                    {getIcon(notif.type)}
+                                <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${n.is_read ? 'bg-transparent' : 'bg-white'}`} />
+                                <div className="min-w-0 flex-1">
+                                    <p className={`text-sm font-medium ${n.is_read ? 'text-zinc-400' : 'text-white'}`}>
+                                        {n.title}
+                                    </p>
+                                    {n.body && (
+                                        <p className="text-zinc-500 text-xs mt-0.5">{n.body}</p>
+                                    )}
+                                    <p className="text-zinc-600 text-xs mt-1">
+                                        {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
+                                    </p>
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                    <div className="w-8 h-8 rounded-full overflow-hidden mb-2">
-                                        <img src={notif.notifier?.profiles?.profile_image || `https://i.pravatar.cc/150?u=${notif.notifier?.username}`} alt={notif.notifier?.username} />
-                                    </div>
-                                    <div className="flex items-center gap-1 mb-1">
-                                        <span className="font-bold text-[15px]">{notif.notifier?.username}</span>
-                                        <span className="text-[#6b7280] text-[15px]">{notif.content}</span>
-                                        <span className="text-[#6b7280] text-xs ml-auto">
-                                            {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true })}
-                                        </span>
-                                    </div>
-                                </div>
-                            </motion.div>
+                            </div>
                         ))}
-                    </AnimatePresence>
+                    </div>
                 )}
-            </div>
-
-            {/* Empty State / Footer */}
-            <div className="p-8 text-center text-[#6b7280] border-t border-[#1a1a1a]">
-                <p className="text-sm">You've reached the end of your notifications.</p>
             </div>
         </div>
     )

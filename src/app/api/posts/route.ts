@@ -4,60 +4,37 @@ import { NextResponse } from 'next/server'
 export async function GET(request: Request) {
     const supabase = await createClient()
     const { searchParams } = new URL(request.url)
+    const limit = Math.min(parseInt(searchParams.get('limit') ?? '30'), 50)
+    const offset = parseInt(searchParams.get('offset') ?? '0')
 
-    // By default, fetch global posts
-    let query = supabase
+    const { data, error } = await supabase
         .from('posts')
-        .select(`
-            *,
-            author:users(id, username, is_premium, builder_score, role)
-        `)
+        .select('*, profiles(id, username, full_name, avatar_url, role)')
         .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1)
 
-    if (searchParams.get('type')) {
-        query = query.eq('post_type', searchParams.get('type'))
-    }
-
-    const { data, error } = await query
-
-    if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 })
-    }
-
-    return NextResponse.json({ posts: data })
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json(data ?? [])
 }
 
 export async function POST(request: Request) {
     const supabase = await createClient()
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    let body: any
+    try { body = await request.json() } catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }) }
 
-    try {
-        const body = await request.json()
-        const { content, media_urls, post_type } = body
+    const { content, image_url } = body
+    if (!content?.trim()) return NextResponse.json({ error: 'Content is required' }, { status: 400 })
+    if (content.length > 500) return NextResponse.json({ error: 'Content too long' }, { status: 400 })
 
-        if (!content) {
-            return NextResponse.json({ error: 'Post content is required' }, { status: 400 })
-        }
+    const { data, error } = await supabase
+        .from('posts')
+        .insert({ author_id: session.user.id, content: content.trim(), image_url: image_url ?? null })
+        .select('*, profiles(id, username, full_name, avatar_url, role)')
+        .single()
 
-        const { data, error } = await supabase
-            .from('posts')
-            .insert({
-                user_id: user.id,
-                content,
-                media_urls: media_urls || [],
-                post_type: post_type || 'update'
-            })
-            .select()
-            .single()
-
-        if (error) throw error
-
-        return NextResponse.json({ post: data }, { status: 201 })
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 400 })
-    }
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json(data, { status: 201 })
 }
