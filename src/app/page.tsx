@@ -45,14 +45,14 @@ export default function Home() {
           .select('*')
           .limit(2)
 
-        if (builders) setTrendingBuilders(builders.map(b => ({
+        if (builders) setTrendingBuilders(builders.map((b: any) => ({
           name: b.username,
           role: b.role,
           score: b.builder_score,
           img: (b.profiles as any)?.profile_image || `https://i.pravatar.cc/150?u=${b.username}`
         })))
 
-        if (services) setFeaturedServices(services.map(s => ({
+        if (services) setFeaturedServices(services.map((s: any) => ({
           title: s.title,
           provider: (s.users as any)?.username || "Unknown",
           price: s.price_usdc,
@@ -60,7 +60,7 @@ export default function Home() {
           img: s.images?.[0] || `https://i.pravatar.cc/150?u=${s.id}`
         })))
 
-        if (bprints) setBlueprints(bprints.map(bp => ({
+        if (bprints) setBlueprints(bprints.map((bp: any) => ({
           title: bp.title,
           tags: bp.tech_stack || [],
           price: bp.price_usdc > 0 ? `${bp.price_usdc} USDC` : "Free"
