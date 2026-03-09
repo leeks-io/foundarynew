@@ -1,13 +1,13 @@
 "use client"
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { createSupabaseBrowserClient } from '@/utils/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
 
 export function useNotifications() {
     const { user } = useAuth()
     const queryClient = useQueryClient()
-    const supabase = createClient()
+    const supabase = createSupabaseBrowserClient()
 
     const query = useQuery({
         queryKey: ['notifications', user?.id],

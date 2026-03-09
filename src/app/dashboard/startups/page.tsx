@@ -1,4 +1,5 @@
 'use client'
+export const dynamic = 'force-dynamic'
 
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -14,7 +15,7 @@ import { useStartups } from '@/hooks/useStartups'
 import { useBlueprints } from '@/hooks/useBlueprints'
 import { useBuilders } from '@/hooks/useBuilders'
 import { createStartup } from '@/lib/queries/startups'
-import { createClient } from '@/lib/supabase/client'
+import { createSupabaseBrowserClient } from '@/utils/supabase/client'
 
 import Link from 'next/link'
 
@@ -34,7 +35,7 @@ export default function StartupHub() {
     const [isPosting, setIsPosting] = useState(false)
 
     const isPremium = currentUser?.is_premium || false
-    const supabase = createClient()
+    const supabase = createSupabaseBrowserClient()
 
     const handlePostStartup = async () => {
         if (!startupName || !currentUser) return

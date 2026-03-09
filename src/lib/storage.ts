@@ -1,7 +1,7 @@
-import { createClient } from '@/lib/supabase/client'
+import { createSupabaseBrowserClient } from '@/utils/supabase/client'
 
 export async function uploadAvatar(userId: string, file: File): Promise<string> {
-    const supabase = createClient()
+    const supabase = createSupabaseBrowserClient()
     const ext = file.name.split(".").pop()
     const path = `${userId}/avatar.${ext}`
 
@@ -17,7 +17,7 @@ export async function uploadAvatar(userId: string, file: File): Promise<string> 
 }
 
 export async function uploadServiceImage(serviceId: string, file: File): Promise<string> {
-    const supabase = createClient()
+    const supabase = createSupabaseBrowserClient()
     const path = `${serviceId}/${Date.now()}-${file.name}`
     const { error } = await supabase.storage.from('service-images').upload(path, file, { upsert: false })
     if (error) throw error
@@ -27,7 +27,7 @@ export async function uploadServiceImage(serviceId: string, file: File): Promise
 }
 
 export async function uploadDelivery(orderId: string, file: File): Promise<string> {
-    const supabase = createClient()
+    const supabase = createSupabaseBrowserClient()
     const path = `${orderId}/${file.name}`
     const { error } = await supabase.storage.from('order-deliveries').upload(path, file, { upsert: false })
     if (error) throw error

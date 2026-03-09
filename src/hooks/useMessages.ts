@@ -1,13 +1,13 @@
 "use client"
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { createSupabaseBrowserClient } from '@/utils/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
 
 export function useMessages(otherUserId: string) {
     const { user } = useAuth()
     const queryClient = useQueryClient()
-    const supabase = createClient()
+    const supabase = createSupabaseBrowserClient()
     const channelRef = useRef<any>(null)
 
     const query = useQuery({
@@ -49,7 +49,7 @@ export function useMessages(otherUserId: string) {
 }
 
 export function useSendMessage() {
-    const supabase = createClient()
+    const supabase = createSupabaseBrowserClient()
     const { user } = useAuth()
 
     return async (receiverId: string, content: string) => {
@@ -64,7 +64,7 @@ export function useSendMessage() {
     }
 } export function useConversations() {
     const { user } = useAuth()
-    const supabase = createClient()
+    const supabase = createSupabaseBrowserClient()
     return useQuery({
         queryKey: ['conversations', user?.id],
         queryFn: async () => {

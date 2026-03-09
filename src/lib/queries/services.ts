@@ -1,7 +1,7 @@
-import { createClient } from '@/lib/supabase/client'
+import { createSupabaseBrowserClient } from '@/utils/supabase/client'
 
 export async function fetchServices(category?: string, sortBy?: string) {
-    const supabase = createClient()
+    const supabase = createSupabaseBrowserClient()
     let q = supabase
         .from('services')
         .select(`*, users:user_id(id, username, is_premium, profiles(profile_image))`)

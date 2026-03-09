@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
-import { createClient } from '@/lib/supabase/client'
+import { createSupabaseBrowserClient } from '@/utils/supabase/client'
 
 export function useBuilders(limit = 6) {
-    const supabase = createClient()
+    const supabase = createSupabaseBrowserClient()
     return useQuery({
         queryKey: ['builders', limit],
         queryFn: async () => {

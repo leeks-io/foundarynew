@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/client'
+import { createSupabaseBrowserClient } from '@/utils/supabase/client'
 
 export type JobFilters = {
     search?: string
@@ -8,7 +8,7 @@ export type JobFilters = {
 }
 
 export async function fetchJobs(filters: JobFilters = {}) {
-    const supabase = createClient()
+    const supabase = createSupabaseBrowserClient()
     let query = supabase
         .from('jobs')
         .select(`
@@ -28,7 +28,7 @@ export async function fetchJobs(filters: JobFilters = {}) {
 }
 
 export async function fetchJobById(id: string) {
-    const supabase = createClient()
+    const supabase = createSupabaseBrowserClient()
     const { data, error } = await supabase
         .from('jobs')
         .select(`*, users:founder_id(id, username, is_premium, profiles(profile_image, bio))`)

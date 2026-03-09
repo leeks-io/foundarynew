@@ -1,10 +1,10 @@
 "use client"
 import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { createSupabaseBrowserClient } from '@/utils/supabase/client'
 import { useQuery } from '@tanstack/react-query'
 
 export function useAuth() {
-    const supabase = createClient()
+    const supabase = createSupabaseBrowserClient()
     const [session, setSession] = useState<any>(null)
     const [loading, setLoading] = useState(true)
 

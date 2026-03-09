@@ -1,7 +1,7 @@
-import { createClient } from '@/lib/supabase/client'
+import { createSupabaseBrowserClient } from '@/utils/supabase/client'
 
 export async function fetchBlueprints() {
-    const supabase = createClient()
+    const supabase = createSupabaseBrowserClient()
     const { data, error } = await supabase
         .from('blueprints')
         .select('*')

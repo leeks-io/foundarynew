@@ -1,14 +1,14 @@
 "use client"
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { createSupabaseBrowserClient } from '@/utils/supabase/client'
 import { fetchFeed } from '@/lib/queries/feed'
 import { useAuth } from '@/hooks/useAuth'
 
 export function useFeed() {
     const { user } = useAuth()
     const queryClient = useQueryClient()
-    const supabase = createClient()
+    const supabase = createSupabaseBrowserClient()
 
     const query = useQuery({
         queryKey: ['feed', user?.id],

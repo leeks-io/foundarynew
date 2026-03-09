@@ -1,11 +1,11 @@
 "use client"
 import { useQuery } from '@tanstack/react-query'
-import { createClient } from '@/lib/supabase/client'
+import { createSupabaseBrowserClient } from '@/utils/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
 
 export function useJobSeekerStats() {
     const { user } = useAuth()
-    const supabase = createClient()
+    const supabase = createSupabaseBrowserClient()
     return useQuery({
         queryKey: ['dashboard-seeker', user?.id],
         queryFn: async () => {
@@ -28,7 +28,7 @@ export function useJobSeekerStats() {
 
 export function useFreelancerStats() {
     const { user } = useAuth()
-    const supabase = createClient()
+    const supabase = createSupabaseBrowserClient()
     return useQuery({
         queryKey: ['dashboard-freelancer', user?.id],
         queryFn: async () => {
@@ -48,7 +48,7 @@ export function useFreelancerStats() {
 
 export function useFounderStats() {
     const { user } = useAuth()
-    const supabase = createClient()
+    const supabase = createSupabaseBrowserClient()
     return useQuery({
         queryKey: ['dashboard-founder', user?.id],
         queryFn: async () => {

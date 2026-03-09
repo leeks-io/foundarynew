@@ -1,7 +1,7 @@
-import { createClient } from '@/lib/supabase/client'
+import { createSupabaseBrowserClient } from '@/utils/supabase/client'
 
 export async function fetchFeed(userId: string, cursor?: string) {
-    const supabase = createClient()
+    const supabase = createSupabaseBrowserClient()
 
     // Base query for posts
     let query = supabase
@@ -30,7 +30,7 @@ export async function fetchFeed(userId: string, cursor?: string) {
 }
 
 export async function createPost(userId: string, content: string, mediaUrls: string[] = [], postType: string = 'update') {
-    const supabase = createClient()
+    const supabase = createSupabaseBrowserClient()
     const { data, error } = await supabase
         .from('posts')
         .insert({

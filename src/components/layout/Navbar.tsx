@@ -4,14 +4,14 @@ import Link from 'next/link'
 import { Search, Wallet } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { createSupabaseBrowserClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 
 export default function Navbar() {
     const [isSearchFocused, setIsSearchFocused] = useState(false)
     const [user, setUser] = useState<any>(null)
     const router = useRouter()
-    const supabase = createClient()
+    const supabase = createSupabaseBrowserClient()
 
     useEffect(() => {
         const getUser = async () => {

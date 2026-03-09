@@ -1,11 +1,12 @@
 'use client'
+export const dynamic = 'force-dynamic'
 
 import { motion } from 'framer-motion'
 import { CheckCircle2, Star, TrendingUp, Users, ArrowRight, Rocket, Briefcase, Zap, ShoppingCart, Lightbulb } from 'lucide-react'
 import Link from 'next/link'
 import Navbar from '@/components/layout/Navbar'
 import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { createSupabaseBrowserClient } from '@/utils/supabase/client'
 
 interface Blueprint {
   title: string
@@ -19,7 +20,7 @@ export default function Home() {
   const [blueprints, setBlueprints] = useState<Blueprint[]>([])
   const [loading, setLoading] = useState(true)
 
-  const supabase = createClient()
+  const supabase = createSupabaseBrowserClient()
 
   useEffect(() => {
     const fetchData = async () => {

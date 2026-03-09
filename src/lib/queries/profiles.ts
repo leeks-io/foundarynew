@@ -1,7 +1,7 @@
-import { createClient } from '@/lib/supabase/client'
+import { createSupabaseBrowserClient } from '@/utils/supabase/client'
 
 export async function fetchProfile(username: string) {
-    const supabase = createClient()
+    const supabase = createSupabaseBrowserClient()
     const { data, error } = await supabase
         .from('users')
         .select(`
@@ -19,7 +19,7 @@ export async function fetchProfile(username: string) {
 }
 
 export async function updateProfile(userId: string, updates: any) {
-    const supabase = createClient()
+    const supabase = createSupabaseBrowserClient()
     const { data, error } = await supabase
         .from('profiles')
         .update(updates)

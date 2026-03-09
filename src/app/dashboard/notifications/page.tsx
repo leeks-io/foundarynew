@@ -1,4 +1,5 @@
 'use client'
+export const dynamic = 'force-dynamic'
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -10,6 +11,7 @@ import { cn } from '@/lib/utils'
 import Link from 'next/link'
 import { useNotifications } from '@/hooks/useNotifications'
 import { formatDistanceToNow } from 'date-fns'
+import { createSupabaseBrowserClient } from '@/utils/supabase/client'
 
 export default function NotificationsPage() {
     const [activeTab, setActiveTab] = useState('all')

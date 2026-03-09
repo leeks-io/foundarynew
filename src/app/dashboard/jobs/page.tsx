@@ -1,21 +1,24 @@
 'use client'
+export const dynamic = 'force-dynamic'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-    Search, Briefcase, MapPin, DollarSign, Calendar,
-    ArrowUpRight, Bookmark, CheckCircle2, AlertTriangle,
-    Users, Rocket, Sparkles, X
+    Briefcase, MapPin, DollarSign, Clock,
+    Search, Filter, ChevronRight, Zap,
+    Building2, Globe, Target, ArrowRight,
+    Bookmark, Rocket, Calendar, ArrowUpRight,
+    AlertTriangle, Sparkles, X, Users, CheckCircle2
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
 import { useAuth } from '@/hooks/useAuth'
 import { useJobs } from '@/hooks/useJobs'
 import { useJobSeekerStats } from '@/hooks/useDashboard'
 import { JobsSkeleton } from '@/components/skeletons/JobsSkeleton'
 import { EmptyJobs } from '@/components/empty/EmptyJobs'
-import { createClient } from '@/lib/supabase/client'
+import { createSupabaseBrowserClient } from '@/utils/supabase/client'
+import Link from 'next/link'
 
 export default function JobsPage() {
     const [searchQuery, setSearchQuery] = useState('')
@@ -29,12 +32,12 @@ export default function JobsPage() {
     const { data: seekerStats } = useJobSeekerStats()
     const applicationCount = seekerStats?.applications || 0
     const DAILY_LIMIT = 2
-    const supabase = createClient()
 
     // We can use a simple query for top founders here as well
     const { data: topFounders } = useJobs()
 
     const handleApply = async (jobId: string) => {
+        const supabase = createSupabaseBrowserClient()
         if (!currentUser) return // Should redirect to auth or show message
 
         if (applicationCount >= DAILY_LIMIT && !currentUser?.user_metadata?.is_premium) {

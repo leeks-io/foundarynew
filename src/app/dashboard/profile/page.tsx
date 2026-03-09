@@ -1,4 +1,5 @@
 'use client'
+export const dynamic = 'force-dynamic'
 
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
@@ -9,7 +10,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
-import { createClient } from '@/lib/supabase/client'
+import { createSupabaseBrowserClient } from '@/utils/supabase/client'
 import SocialPost from '@/components/dashboard/SocialPost'
 import ServiceCard from '@/components/marketplace/ServiceCard'
 import StartupCard from '@/components/marketplace/StartupCard'
@@ -24,7 +25,7 @@ export default function ProfilePage() {
     const [userServices, setUserServices] = useState<any[]>([])
     const [userStartups, setUserStartups] = useState<any[]>([])
 
-    const supabase = createClient()
+    const supabase = createSupabaseBrowserClient()
 
     useEffect(() => {
         const fetchProfile = async () => {
@@ -58,7 +59,7 @@ export default function ProfilePage() {
             const { data: startups } = await supabase
                 .from('startups')
                 .select('*')
-                .eq('user_id', authUser.id)
+                .eq('founder_id', authUser.id)
 
             if (posts) setUserPosts(posts)
             if (services) setUserServices(services)

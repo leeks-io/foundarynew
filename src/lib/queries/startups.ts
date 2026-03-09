@@ -1,7 +1,7 @@
-import { createClient } from '@/lib/supabase/client'
+import { createSupabaseBrowserClient } from '@/utils/supabase/client'
 
 export async function fetchStartups() {
-    const supabase = createClient()
+    const supabase = createSupabaseBrowserClient()
     const { data, error } = await supabase
         .from('startups')
         .select('*')
@@ -11,11 +11,11 @@ export async function fetchStartups() {
 }
 
 export async function createStartup(userId: string, startupData: any) {
-    const supabase = createClient()
+    const supabase = createSupabaseBrowserClient()
     const { data, error } = await supabase
         .from('startups')
         .insert({
-            user_id: userId,
+            founder_id: userId,
             ...startupData
         })
         .select()
