@@ -250,7 +250,7 @@ export default function StartupHub() {
                             exit={{ opacity: 0, y: -10 }}
                             className="space-y-6"
                         >
-                            {blueprints.length > 0 ? blueprints.map((bp: any) => (
+                            {blueprints && blueprints.length > 0 ? blueprints.map((bp: any) => (
                                 <div key={bp.id} className="bg-[#0d0d0d] border border-[#1a1a1a] border-l-4 border-l-[#07da63] p-8 rounded-r-[2.5rem] group hover:bg-[#111111] transition-all">
                                     <div className="flex justify-between items-start mb-4">
                                         <div>
@@ -296,7 +296,7 @@ export default function StartupHub() {
                             exit={{ opacity: 0, y: -10 }}
                             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
                         >
-                            {cofounders.length > 0 ? (
+                            {cofounders && cofounders.length > 0 ? (
                                 cofounders.map((cf: any) => (
                                     <div key={cf.username} className="bg-[#0d0d0d] border border-[#1a1a1a] p-6 rounded-[2rem] group hover:border-[#07da63]/30 transition-all">
                                         <div className="flex flex-col items-center text-center">
