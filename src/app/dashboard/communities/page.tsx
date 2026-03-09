@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
     Users, Search, Plus, Radio, Lock, ChevronRight,
-    MessageSquare, Star, Zap, Globe, Shield
+    MessageSquare, Star, Zap, Globe, Shield, CheckCircle2
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
