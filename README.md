@@ -1,4 +1,4 @@
-# Foundry Network
+# Foundry Network (Refactored)
 The Marketplace for Internet Builders
 
 Foundry Network is a Web3-native platform where founders, freelancers, and job seekers collaborate, hire, build startups, and trade digital services in one place.
