@@ -1,3 +1,5 @@
+'use client'
+
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Search, TrendingUp, Users, Rocket, ShoppingCart, Lightbulb, ArrowRight, Star } from 'lucide-react'
