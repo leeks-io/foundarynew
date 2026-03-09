@@ -32,7 +32,7 @@ export function useMessages(otherUserId: string) {
             .channel(`messages-${user.id}-${otherUserId}`)
             .on('postgres_changes', {
                 event: 'INSERT', schema: 'public', table: 'messages',
-            }, (payload) => {
+            }, (payload: any) => {
                 // If the message is part of this convo, refresh
                 const msg = payload.new
                 if ((msg.sender_id === user.id && msg.receiver_id === otherUserId) ||
@@ -77,7 +77,7 @@ export function useSendMessage() {
 
             // Logic to unique by other user
             const conversationsMap = new Map()
-            data?.forEach(msg => {
+            data?.forEach((msg: any) => {
                 const otherUser = msg.sender_id === user!.id ? msg.receiver : msg.sender
                 if (!conversationsMap.has(otherUser.id)) {
                     conversationsMap.set(otherUser.id, {
