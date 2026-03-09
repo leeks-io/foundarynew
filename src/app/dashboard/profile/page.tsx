@@ -1,112 +1,200 @@
 'use client'
 
-import { useRole } from '@/context/RoleContext'
-import { CheckCircle2, Star, Globe, Twitter, Github, Linkedin, ExternalLink } from 'lucide-react'
+import { useState } from 'react'
+import { motion } from 'framer-motion'
+import {
+    CheckCircle2, MapPin, Link as LinkIcon, Calendar,
+    MessageSquare, UserPlus, Zap, MoreHorizontal,
+    ShieldCheck, Star, Briefcase, Rocket, Sparkles
+} from 'lucide-react'
+import Link from 'next/link'
+import { cn } from '@/lib/utils'
 
 export default function ProfilePage() {
-    const { role } = useRole()
+    const [activeTab, setActiveTab] = useState('posts')
 
     return (
-        <div className="max-w-6xl mx-auto pb-40">
-            {/* Banner */}
-            <div className="h-48 w-full bg-gradient-to-r from-primary/20 via-primary/5 to-accent/20 rounded-[2.5rem] relative overflow-hidden mb-20">
-                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10" />
-            </div>
-
-            <div className="px-10 flex flex-col md:flex-row gap-12 -mt-32 relative z-10">
-                {/* Left Side: Profile Info */}
-                <div className="w-full md:w-80 shrink-0">
-                    <div className="glass p-8 rounded-[2.5rem] border border-white/5 mb-8">
-                        <div className="w-32 h-32 rounded-3xl bg-[#0B0F19] p-1 border border-white/10 mx-auto mb-6 relative">
-                            <div className="w-full h-full rounded-2xl bg-gradient-to-br from-primary/30 to-accent/30 flex items-center justify-center font-black text-4xl text-white/50">
-                                JD
-                            </div>
-                            <div className="absolute -bottom-2 -right-2 p-1.5 bg-accent rounded-full glow-accent">
-                                <CheckCircle2 className="w-4 h-4 text-[#0B0F19]" />
-                            </div>
-                        </div>
-
-                        <div className="text-center mb-8">
-                            <h1 className="text-2xl font-bold mb-1">John Doe</h1>
-                            <p className="text-sm text-white/40 mb-3 capitalize">{role}</p>
-                            <div className="flex items-center justify-center gap-1.5 px-3 py-1 bg-accent/10 border border-accent/20 rounded-full text-[10px] font-bold text-accent">
-                                <Star className="w-3 h-3 fill-accent" />
-                                FOUNDRY SCORE: 942
-                            </div>
-                        </div>
-
-                        <div className="space-y-4 pt-8 border-t border-white/5">
-                            <button className="w-full py-3 bg-primary text-white rounded-xl font-bold glow-primary">
-                                Follow Builder
-                            </button>
-                            <button className="w-full py-3 bg-white/5 border border-white/5 text-white rounded-xl font-bold hover:bg-white/10">
-                                Send Message
-                            </button>
-                        </div>
+        <div className="flex flex-1 min-w-0">
+            {/* Center Profile Content */}
+            <div className="flex-1 min-w-0 border-r border-[#1a1a1a]">
+                {/* Profile Header */}
+                <div className="relative">
+                    {/* Banner */}
+                    <div className="h-[200px] bg-[#111111] relative overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-br from-[#1a1a1a] to-black opacity-50" />
+                        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
                     </div>
 
-                    <div className="glass p-8 rounded-[2rem] border border-white/5 space-y-6 text-sm">
-                        <div className="flex items-center justify-between text-white/40">
-                            <div className="flex items-center gap-2">
-                                <Globe className="w-4 h-4" />
-                                Website
-                            </div>
-                            <span className="text-white hover:text-primary truncate">doe.build</span>
-                        </div>
-                        <div className="flex items-center justify-between text-white/40">
-                            <div className="flex items-center gap-2">
-                                <Twitter className="w-4 h-4" />
-                                X / Twitter
-                            </div>
-                            <span className="text-white hover:text-primary">@johndoe</span>
-                        </div>
-                        <div className="flex items-center justify-between text-white/40">
-                            <div className="flex items-center gap-2">
-                                <Github className="w-4 h-4" />
-                                GitHub
-                            </div>
-                            <span className="text-white hover:text-primary">jdoe-dev</span>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Right Side: Content */}
-                <div className="flex-1 space-y-12">
-                    <section>
-                        <h2 className="text-2xl font-bold mb-6">About</h2>
-                        <p className="text-white/60 leading-relaxed max-w-2xl text-lg">
-                            Full-stack engineer and product designer passionate about Web3 and AI.
-                            Currently building modular protocols for the internet builder network.
-                            Available for high-stakes projects and startup collaborations.
-                        </p>
-                    </section>
-
-                    {/* Role specific content tabs */}
-                    <section>
-                        <div className="flex gap-8 border-b border-white/5 mb-10">
-                            <button className="pb-4 text-sm font-bold border-b-2 border-primary text-white">Portfolio</button>
-                            <button className="pb-4 text-sm font-bold text-white/40 hover:text-white transition-colors">Services</button>
-                            <button className="pb-4 text-sm font-bold text-white/40 hover:text-white transition-colors">Startups</button>
-                            <button className="pb-4 text-sm font-bold text-white/40 hover:text-white transition-colors">Reviews</button>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {[1, 2, 3, 4].map((i) => (
-                                <div key={i} className="glass group rounded-3xl p-8 border border-white/5 hover:border-primary/50 cursor-pointer overflow-hidden transition-all">
-                                    <div className="flex items-center justify-between mb-6">
-                                        <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center transition-colors group-hover:bg-primary/10">
-                                            <ExternalLink className="w-5 h-5 text-white/20 group-hover:text-primary" />
-                                        </div>
-                                        <div className="px-3 py-1 rounded-full bg-white/5 text-[10px] font-bold text-white/40 uppercase">Project</div>
-                                    </div>
-                                    <h3 className="text-xl font-bold mb-2">OmniChain Protocol</h3>
-                                    <p className="text-white/40 text-sm">A cross-chain liquidity aggregator built with zero-knowledge proofs.</p>
+                    {/* Avatar & Actions */}
+                    <div className="px-4 pb-4">
+                        <div className="flex justify-between items-start -mt-[60px] mb-4">
+                            <div className="relative">
+                                <div className="w-[120px] h-[120px] rounded-full bg-black border-4 border-black overflow-hidden relative group">
+                                    <img
+                                        src="https://i.pravatar.cc/150?u=david"
+                                        alt="David Park"
+                                        className="w-full h-full object-cover"
+                                    />
+                                    <div className="absolute inset-0 border-2 border-[#07da63] rounded-full pointer-events-none" />
                                 </div>
-                            ))}
+                            </div>
+                            <div className="pt-[70px] flex gap-2">
+                                <button className="p-2 border border-[#1a1a1a] rounded-full hover:bg-white/5 transition-colors">
+                                    <MoreHorizontal size={20} />
+                                </button>
+                                <button className="p-2 border border-[#1a1a1a] rounded-full hover:bg-white/5 transition-colors">
+                                    <MessageSquare size={20} />
+                                </button>
+                                <button className="bg-white text-black font-bold px-5 py-2 rounded-full hover:opacity-90 transition-opacity text-sm">
+                                    Follow
+                                </button>
+                                <button className="bg-[#07da63] text-black font-bold px-5 py-2 rounded-full hover:bg-[#08f26e] transition-colors text-sm flex items-center gap-1">
+                                    <Zap size={14} className="fill-current" /> Hire
+                                </button>
+                            </div>
                         </div>
-                    </section>
+
+                        {/* User Info */}
+                        <div className="mb-6">
+                            <h1 className="text-xl font-bold flex items-center gap-1.5">
+                                David Park <CheckCircle2 size={18} className="text-[#07da63]" />
+                                <span className="text-[10px] bg-[#07da63]/10 text-[#07da63] px-2 py-0.5 rounded border border-[#07da63]/20 font-bold uppercase tracking-widest flex items-center gap-1 glow-primary">
+                                    <Sparkles size={10} /> Premium
+                                </span>
+                            </h1>
+                            <p className="text-[#6b7280] text-[15px] mb-3">@davidbuilds</p>
+                            <p className="text-[15px] leading-relaxed mb-4 max-w-xl">
+                                Full-Stack Engineer & Web3 Builder. Building @foundrynetwork. prev: engineering at some-unicorn.
+                            </p>
+
+                            <div className="flex flex-wrap gap-2 mb-4">
+                                {['React', 'Solana', 'UI/UX', 'Node.js'].map(skill => (
+                                    <span key={skill} className="px-3 py-1 bg-transparent border border-[#07da63]/30 text-[#07da63] text-xs font-bold rounded-full">
+                                        {skill}
+                                    </span>
+                                ))}
+                            </div>
+
+                            <div className="flex flex-wrap gap-x-4 gap-y-2 text-[#6b7280] text-[15px]">
+                                <span className="flex items-center gap-1"><MapPin size={16} /> San Francisco, CA</span>
+                                <span className="flex items-center gap-1"><LinkIcon size={16} /> <a href="#" className="text-[#07da63] hover:underline">foundrynetwork.space</a></span>
+                                <span className="flex items-center gap-1"><Calendar size={16} /> Joined March 2024</span>
+                            </div>
+
+                            <div className="flex gap-4 mt-3 text-[15px]">
+                                <span className="hover:underline cursor-pointer"><strong className="text-white">234</strong> <span className="text-[#6b7280]">Following</span></span>
+                                <span className="hover:underline cursor-pointer"><strong className="text-white">1.2k</strong> <span className="text-[#6b7280]">Followers</span></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Builder Score Card (X style integration) */}
+                    <div className="px-4 mb-4">
+                        <div className="bg-[#0d0d0d] border border-[#1a1a1a] rounded-2xl p-5">
+                            <div className="flex justify-between items-start mb-4">
+                                <div>
+                                    <h3 className="text-[#6b7280] text-xs font-bold uppercase tracking-widest mb-1">Builder Score</h3>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-3xl font-bold text-[#07da63]">842</span>
+                                        <span className="text-xs bg-[#07da63]/10 text-[#07da63] px-2 py-0.5 rounded font-bold uppercase tracking-wide">Top 2%</span>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-right">
+                                    <div><p className="text-[#6b7280] text-[10px] font-bold uppercase tracking-tighter">Services</p><p className="font-bold">48</p></div>
+                                    <div><p className="text-[#6b7280] text-[10px] font-bold uppercase tracking-tighter">Earned</p><p className="font-bold text-[#07da63]">9.4k</p></div>
+                                    <div><p className="text-[#6b7280] text-[10px] font-bold uppercase tracking-tighter">Projects</p><p className="font-bold">18</p></div>
+                                    <div><p className="text-[#6b7280] text-[10px] font-bold uppercase tracking-tighter">Rating</p><p className="font-bold">4.9★</p></div>
+                                </div>
+                            </div>
+                            <div className="h-1.5 bg-[#1a1a1a] rounded-full overflow-hidden">
+                                <div className="h-full bg-[#07da63] w-[84%]" />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Sticky Tabs */}
+                    <div className="flex border-b border-[#1a1a1a] sticky top-[60px] z-20 bg-black/80 backdrop-blur-md">
+                        {['Posts', 'Services', 'Portfolio', 'Startups', 'Reviews'].map(tab => (
+                            <button
+                                key={tab}
+                                onClick={() => setActiveTab(tab.toLowerCase())}
+                                className="flex-1 py-4 hover:bg-[#111111] transition-all relative group text-center"
+                            >
+                                <span className={cn("text-[15px] px-2", activeTab === tab.toLowerCase() ? "font-bold text-white" : "font-medium text-[#6b7280]")}>
+                                    {tab}
+                                </span>
+                                {activeTab === tab.toLowerCase() && <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-[#07da63] rounded-full" />}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Tab Content (Feed style) */}
+                <div className="divide-y divide-[#1a1a1a] pb-20">
+                    <div className="p-10 text-center text-[#6b7280]">
+                        <p className="mb-2 italic">Showing {activeTab}...</p>
+                        <p className="text-sm">Real feed content would appear here based on selected tab.</p>
+                    </div>
                 </div>
             </div>
+
+            {/* Right Content Panel */}
+            <aside className="hidden lg:block w-[300px] shrink-0 h-screen sticky top-[60px] p-4 space-y-4">
+                {/* On-Chain Reputation */}
+                <div className="bg-[#0d0d0d] border border-[#1a1a1a] rounded-2xl p-4">
+                    <h3 className="text-xl font-bold mb-4">Reputation</h3>
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-3">
+                            <ShieldCheck size={20} className="text-[#07da63]" />
+                            <div>
+                                <p className="text-sm font-bold">Escrow Deals</p>
+                                <p className="text-xl font-bold">31</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <TrendingUp size={20} className="text-[#07da63]" />
+                            <div>
+                                <p className="text-sm font-bold">Success Rate</p>
+                                <p className="text-xl font-bold">98%</p>
+                            </div>
+                        </div>
+                        <div className="pt-2">
+                            <div className="px-3 py-1.5 bg-[#07da63]/10 text-[#07da63] text-xs font-bold rounded-lg border border-[#07da63]/20 flex items-center justify-center gap-2">
+                                <CheckCircle2 size={12} /> Verified on Solana
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Active Services */}
+                <div className="bg-[#0d0d0d] border border-[#1a1a1a] rounded-2xl p-4">
+                    <h3 className="text-xl font-bold mb-4">Active Services</h3>
+                    <div className="space-y-4">
+                        <div className="group cursor-pointer">
+                            <p className="font-bold text-[15px] group-hover:underline">Full-Stack Landing Page</p>
+                            <p className="text-[#07da63] text-sm font-bold">250 USDC</p>
+                        </div>
+                        <div className="group cursor-pointer">
+                            <p className="font-bold text-[15px] group-hover:underline">Smart Contract Audit</p>
+                            <p className="text-[#07da63] text-sm font-bold">800 USDC</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Startups */}
+                <div className="bg-[#0d0d0d] border border-[#1a1a1a] rounded-2xl p-4">
+                    <h3 className="text-xl font-bold mb-4">Startups</h3>
+                    <div className="flex items-center gap-3 mb-4 group cursor-pointer">
+                        <div className="w-10 h-10 bg-[#1a1a1a] rounded-lg flex items-center justify-center text-[#07da63]">
+                            <Rocket size={20} />
+                        </div>
+                        <div>
+                            <p className="font-bold text-[15px] group-hover:underline">AI Resume Tool</p>
+                            <p className="text-[#6b7280] text-xs">SaaS · MVP</p>
+                        </div>
+                    </div>
+                </div>
+            </aside>
         </div>
     )
 }

@@ -1,7 +1,8 @@
 'use client'
 
-import { Star, Clock, User, Sparkles } from 'lucide-react'
+import { Star, Clock, User, Sparkles, Zap, ArrowRight, CheckCircle2 } from 'lucide-react'
 import { motion } from 'framer-motion'
+import { cn } from '@/lib/utils'
 
 interface ServiceCardProps {
     title: string
@@ -10,49 +11,68 @@ interface ServiceCardProps {
     rating: number
     deliveryTime: number
     image?: string
+    avatar?: string
+    isPremium?: boolean
+    onClick?: () => void
 }
 
-export default function ServiceCard({ title, provider, price, rating, deliveryTime }: ServiceCardProps) {
+export default function ServiceCard({
+    title, provider, price, rating, deliveryTime, image, avatar, isPremium, onClick
+}: ServiceCardProps) {
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            whileHover={{ y: -5 }}
-            className="glass-card rounded-[2.5rem] overflow-hidden group cursor-pointer h-full flex flex-col"
+            whileHover={{ y: -4 }}
+            onClick={onClick}
+            className="bg-[#0d0d0d] border border-[#1a1a1a] rounded-2xl overflow-hidden group cursor-pointer flex flex-col hover:border-[#07da63]/50 transition-all duration-300 relative"
         >
-            <div className="aspect-[16/10] bg-white/5 relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-accent/10 opacity-30 group-hover:opacity-50 transition-opacity duration-500" />
-                <div className="absolute inset-0 group-hover:scale-110 transition-transform duration-700 ease-out">
-                    <div className="w-full h-full flex items-center justify-center opacity-20">
-                        <Sparkles className="w-12 h-12 text-white" />
-                    </div>
+            {/* Service Thumbnail */}
+            <div className="h-44 bg-[#111111] relative overflow-hidden">
+                <img
+                    src={image || `https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=800&q=80&u=${title}`}
+                    alt={title}
+                    className="w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0d0d0d] to-transparent opacity-80" />
+
+                {/* View Overlay */}
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 backdrop-blur-[2px]">
+                    <button className="bg-[#07da63] text-black font-bold px-6 py-2 rounded-lg text-sm flex items-center gap-2 transform translate-y-2 group-hover:translate-y-0 transition-transform">
+                        View Service
+                    </button>
                 </div>
             </div>
 
-            <div className="p-6 flex flex-col flex-grow">
-                <div className="flex items-center gap-2 mb-4">
-                    <div className="w-7 h-7 rounded-full bg-white/5 border border-white/5 flex items-center justify-center">
-                        <User className="w-3.5 h-3.5 text-white/40" />
+            <div className="p-5 flex-1 flex flex-col">
+                {/* Creator Row */}
+                <div className="flex items-center gap-2 mb-3">
+                    <div className="w-6 h-6 rounded-full bg-[#1a1a1a] overflow-hidden border border-[#1a1a1a]">
+                        <img src={avatar || `https://i.pravatar.cc/150?u=${provider}`} alt={provider} className="w-full h-full object-cover" />
                     </div>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-white/40">{provider}</span>
+                    <span className="text-xs font-bold text-[#6b7280] group-hover:text-white transition-colors flex items-center gap-1">
+                        {provider} {isPremium && <CheckCircle2 size={10} className="text-[#07da63]" />}
+                    </span>
                 </div>
 
-                <h3 className="text-lg font-black italic uppercase tracking-tighter text-white mb-6 line-clamp-2 leading-tight group-hover:text-primary transition-colors">
+                <h3 className="font-bold text-[15px] mb-4 leading-tight group-hover:text-[#07da63] transition-colors line-clamp-2">
                     {title}
                 </h3>
 
-                <div className="mt-auto flex items-center justify-between pt-5 border-t border-white/5">
-                    <div className="flex items-center gap-1.5">
-                        <Star className="w-3.5 h-3.5 text-accent fill-accent" />
-                        <span className="text-xs font-black text-white">{rating.toFixed(1)}</span>
+                <div className="flex items-center gap-1 text-[#07da63] mb-4">
+                    <Star size={14} className="fill-[#07da63]" />
+                    <span className="text-sm font-bold text-white">{rating.toFixed(1)}</span>
+                    <span className="text-[#6b7280] text-xs font-medium ml-1">(48 reviews)</span>
+                </div>
+
+                <div className="flex items-center justify-between mt-auto pt-4 border-t border-[#1a1a1a]">
+                    <div className="flex items-center gap-1 text-[#6b7280]">
+                        <Clock size={12} />
+                        <span className="text-[10px] font-bold uppercase tracking-widest">{deliveryTime} Days</span>
                     </div>
-                    <div className="flex items-center gap-1.5 text-white/30">
-                        <Clock className="w-3.5 h-3.5" />
-                        <span className="text-[10px] font-black uppercase">{deliveryTime}d</span>
-                    </div>
-                    <div className="text-sm font-black italic text-accent uppercase">
-                        {price} <span className="text-[9px] text-white/30 not-italic">USDC</span>
+                    <div className="text-right">
+                        <span className="text-lg font-bold text-[#07da63]">{price} USDC</span>
                     </div>
                 </div>
             </div>

@@ -2,102 +2,94 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useRole } from '@/context/RoleContext'
 import {
-    Home,
-    Briefcase,
-    Code2,
-    Rocket,
-    Users,
-    MessageSquare,
-    Bell,
-    User,
-    Settings,
-    ChevronRight
+    Home, Search, Briefcase, ShoppingCart, Rocket,
+    Lightbulb, Users, MessageSquare, Bell, User,
+    Settings, Sparkles, MoreHorizontal
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export default function Sidebar() {
     const pathname = usePathname()
-    const { role } = useRole()
 
-    const commonNav = [
+    const navItems = [
         { name: 'Home', href: '/dashboard', icon: Home },
-        { name: 'Messages', href: '/dashboard/messages', icon: MessageSquare },
-        { name: 'Notifications', href: '/dashboard/notifications', icon: Bell },
+        { name: 'Explore', href: '/dashboard/explore', icon: Search },
+        { name: 'Jobs', href: '/dashboard/jobs', icon: Briefcase },
+        { name: 'Services', href: '/dashboard/services', icon: ShoppingCart },
+        { name: 'Startups', href: '/dashboard/startups', icon: Rocket },
+        { name: 'Blueprints', href: '/dashboard/blueprints', icon: Lightbulb },
+        { name: 'Communities', href: '/dashboard/communities', icon: Users },
+        { name: 'Messages', href: '/dashboard/messages', icon: MessageSquare, badge: 3 },
+        { name: 'Notifications', href: '/dashboard/notifications', icon: Bell, badge: 5 },
+        { name: 'Profile', href: '/dashboard/profile', icon: User },
+        { name: 'Settings', href: '/dashboard/settings', icon: Settings },
     ]
 
-    const roleNav = {
-        jobseeker: [
-            { name: 'Jobs', href: '/dashboard/jobs', icon: Briefcase },
-            { name: 'Applications', href: '/dashboard/applications', icon: Briefcase },
-            { name: 'Portfolio', href: '/dashboard/portfolio', icon: User },
-        ],
-        freelancer: [
-            { name: 'Services', href: '/dashboard/services', icon: Code2 },
-            { name: 'Orders', href: '/dashboard/orders', icon: Rocket },
-            { name: 'Earnings', href: '/dashboard/earnings', icon: Code2 },
-        ],
-        founder: [
-            { name: 'Startups', href: '/dashboard/startups', icon: Rocket },
-            { name: 'Hiring', href: '/dashboard/hiring', icon: Users },
-            { name: 'Team', href: '/dashboard/team', icon: Users },
-        ]
-    }
-
-    const navItems = [...commonNav, ...roleNav[role]]
-
     return (
-        <aside className="fixed left-0 top-0 bottom-0 w-64 bg-[#0B1221]/40 backdrop-blur-xl border-r border-white/5 flex flex-col z-30">
-            <div className="p-6">
-                <Link href="/" className="flex items-center gap-2 mb-10 group">
-                    <div className="p-1.5 bg-primary rounded-lg glow-primary group-hover:scale-105 transition-transform">
-                        <Rocket className="w-5 h-5 text-white" />
-                    </div>
-                    <span className="text-lg font-bold tracking-tight">Foundry</span>
+        <aside className="fixed left-0 top-0 bottom-0 w-[275px] bg-black border-r border-[#1a1a1a] flex flex-col z-40 hidden xl:flex px-4 py-4">
+            {/* Top: Logo */}
+            <div className="mb-6 px-4">
+                <Link href="/" className="text-white font-bold text-2xl flex items-center gap-2">
+                    <span className="text-[#07da63]">⬡</span>
                 </Link>
-
-
-                <nav className="space-y-1">
-                    {navItems.map((item) => {
-                        const isActive = pathname === item.href
-                        return (
-                            <Link
-                                key={item.name}
-                                href={item.href}
-                                className={cn(
-                                    "flex items-center justify-between px-4 py-3 rounded-xl transition-all group",
-                                    isActive
-                                        ? "bg-primary/10 text-primary border border-primary/20"
-                                        : "text-white/40 hover:text-white hover:bg-white/5"
-                                )}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <item.icon className={cn("w-5 h-5", isActive ? "text-primary" : "group-hover:text-white")} />
-                                    <span className="text-sm font-medium">{item.name}</span>
-                                </div>
-                                {isActive && <ChevronRight className="w-4 h-4" />}
-                            </Link>
-                        )
-                    })}
-                </nav>
             </div>
 
-            <div className="mt-auto p-6 space-y-4">
+            {/* Nav Items */}
+            <nav className="flex-1 space-y-1">
+                {navItems.map((item) => {
+                    const isActive = pathname === item.href
+                    return (
+                        <Link
+                            key={item.name}
+                            href={item.href}
+                            className={cn(
+                                "flex items-center gap-4 px-4 py-3 rounded-full transition-all group w-fit pr-8",
+                                isActive ? "text-white" : "text-white/90 hover:bg-[#111111]"
+                            )}
+                        >
+                            <div className="relative">
+                                <item.icon
+                                    size={26}
+                                    className={cn(isActive ? "text-[#07da63] stroke-[2.5px]" : "group-hover:text-white")}
+                                />
+                                {item.badge && (
+                                    <span className="absolute -top-1 -right-1 bg-[#07da63] text-black text-[10px] font-bold px-1 rounded-full min-w-[16px] h-4 flex items-center justify-center border-2 border-black">
+                                        {item.badge}
+                                    </span>
+                                )}
+                            </div>
+                            <span className={cn("text-xl", isActive ? "font-bold" : "font-normal")}>
+                                {item.name}
+                            </span>
+                        </Link>
+                    )
+                })}
+            </nav>
+
+            {/* Bottom Actions */}
+            <div className="mt-auto space-y-4">
+                {/* Premium Upgrade */}
                 <Link
-                    href="/premium"
-                    className="block p-4 rounded-2xl bg-gradient-to-br from-primary to-accent text-[#0B0F19] text-center group overflow-hidden relative"
+                    href="/dashboard/premium"
+                    className="flex items-center gap-3 w-full border border-[#07da63] text-[#07da63] hover:bg-[#07da63]/5 px-4 py-3 rounded-full transition-all group"
                 >
-                    <div className="relative z-10">
-                        <div className="text-xs font-bold uppercase tracking-wider mb-1">Upgrade</div>
-                        <div className="text-sm font-black">GET PREMIUM</div>
-                    </div>
-                    <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform" />
+                    <Sparkles size={20} className="group-hover:scale-110 transition-transform" />
+                    <span className="font-bold text-sm">Upgrade to Premium</span>
                 </Link>
 
-                <div className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-white/5 rounded-xl transition-colors">
-                    <Settings className="w-5 h-5 text-white/40" />
-                    <span className="text-sm font-medium text-white/40">Settings</span>
+                {/* User Mini Profile */}
+                <div className="flex items-center justify-between p-3 rounded-full hover:bg-[#111111] transition-colors cursor-pointer group">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-[#1a1a1a] border border-[#1a1a1a] overflow-hidden">
+                            <img src="https://i.pravatar.cc/150?u=david" alt="David" className="w-full h-full object-cover" />
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-white font-bold text-[15px] leading-tight group-hover:underline">David Park</span>
+                            <span className="text-[#6b7280] text-sm leading-tight">@davidbuilds</span>
+                        </div>
+                    </div>
+                    <MoreHorizontal size={18} className="text-[#6b7280]" />
                 </div>
             </div>
         </aside>

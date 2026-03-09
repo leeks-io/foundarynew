@@ -1,35 +1,51 @@
+'use client'
+
 import Link from 'next/link'
-import { Rocket } from 'lucide-react'
+import { Search, Wallet, Hexagon } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useState } from 'react'
 
 export default function Navbar() {
+    const [isSearchFocused, setIsSearchFocused] = useState(false)
+
     return (
-        <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0B0F19]/40 backdrop-blur-xl border-b border-white/5 px-6 py-3">
-            <div className="max-w-7xl mx-auto flex items-center justify-between">
+        <nav className="fixed top-0 left-0 right-0 h-[60px] z-50 bg-black/80 backdrop-blur-md border-b border-[#1a1a1a] flex items-center justify-between px-4 md:px-6">
+            {/* Left: Logo */}
+            <div className="flex items-center gap-8">
                 <Link href="/" className="flex items-center gap-2 group">
-                    <div className="p-1.5 bg-primary rounded-lg glow-primary group-hover:scale-105 transition-transform">
-                        <Rocket className="w-5 h-5 text-white" />
-                    </div>
-                    <span className="text-lg font-bold tracking-tight">Foundry</span>
+                    <span className="text-white font-bold text-xl flex items-center gap-2">
+                        <span className="text-[#07da63]">⬡</span> Foundry
+                    </span>
                 </Link>
+            </div>
 
-                <div className="hidden lg:flex items-center gap-8 text-sm font-semibold text-white/50">
-                    <Link href="/explore" className="hover:text-white transition-colors">Explore</Link>
-                    <Link href="/jobs" className="hover:text-white transition-colors">Jobs</Link>
-                    <Link href="/services" className="hover:text-white transition-colors">Services</Link>
-                    <Link href="/startups" className="hover:text-white transition-colors">Startups</Link>
-                    <Link href="/communities" className="hover:text-white transition-colors">Communities</Link>
-                </div>
+            {/* Center: Nav Links */}
+            <div className="hidden lg:flex items-center gap-8 font-dmsans text-[15px] font-medium text-[#6b7280]">
+                <Link href="/dashboard" className="hover:text-white transition-colors">Explore</Link>
+                <Link href="/dashboard/jobs" className="hover:text-white transition-colors">Jobs</Link>
+                <Link href="/dashboard/services" className="hover:text-white transition-colors">Services</Link>
+                <Link href="/dashboard/startups" className="hover:text-white transition-colors">Startups</Link>
+                <Link href="/dashboard/communities" className="hover:text-white transition-colors">Communities</Link>
+            </div>
 
-                <div className="flex items-center gap-6">
-                    <Link href="/signin" className="hidden sm:inline-block text-xs font-bold text-white/50 hover:text-white uppercase tracking-widest transition-colors">Sign In</Link>
-                    <Link
-                        href="/join"
-                        className="px-6 py-2 bg-primary text-white rounded-full text-xs font-black uppercase tracking-widest glow-primary hover:bg-primary/90 transition-all active:scale-95 shadow-xl"
-                    >
-                        Join Foundry
-                    </Link>
-                </div>
+            {/* Right: Actions */}
+            <div className="flex items-center gap-3">
+                <Link
+                    href="/auth"
+                    className="hidden md:block text-white font-bold text-sm hover:opacity-80 transition-opacity px-4 py-2"
+                >
+                    Sign In
+                </Link>
+                <Link
+                    href="/auth?mode=signup"
+                    className="hidden md:block bg-[#07da63] text-black font-bold text-sm px-5 py-2 rounded-lg hover:bg-[#08f26e] transition-colors"
+                >
+                    Join Foundry
+                </Link>
+                <button className="flex items-center gap-2 border border-[#1a1a1a] hover:border-[#07da63]/50 px-4 py-2 rounded-lg text-sm font-bold transition-all text-white group">
+                    <Wallet size={16} className="text-[#07da63] group-hover:scale-110 transition-transform" />
+                    <span className="font-dmsans">Connect Wallet</span>
+                </button>
             </div>
         </nav>
     )

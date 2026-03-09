@@ -1,58 +1,56 @@
-import { ArrowRight, Sparkles } from 'lucide-react'
+'use client'
+
+import { motion } from 'framer-motion'
+import { ArrowRight, Sparkles, Zap, ShieldCheck } from 'lucide-react'
+import Link from 'next/link'
 
 export default function Hero() {
     return (
-        <section className="relative pt-40 pb-32 px-6 overflow-hidden min-h-[90vh] flex items-center">
-            {/* Overlay gradient for text readability */}
-            <div className="absolute inset-x-0 top-0 h-full bg-gradient-to-b from-[#0B0F19]/20 via-transparent to-[#0B0F19]/90 -z-10" />
+        <section className="relative pt-32 pb-20 px-6 border-b border-[#1a1a1a] overflow-hidden">
+            {/* Subtle radial pattern */}
+            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.03] pointer-events-none" />
 
-            <div className="max-w-5xl mx-auto text-center">
-                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-[10px] font-black uppercase tracking-[0.2em] text-accent mb-10 animate-fade-in shadow-2xl">
-                    <Sparkles className="w-3 h-3" />
-                    <span>The Marketplace for Internet Builders</span>
-                </div>
+            <div className="max-w-[1200px] mx-auto text-center relative z-10">
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#07da63]/10 border border-[#07da63]/20 text-[10px] font-bold text-[#07da63] uppercase tracking-[0.2em] mb-8"
+                >
+                    <Sparkles size={12} className="fill-current" /> The Future of Internet Building
+                </motion.div>
 
-                <h1 className="text-5xl md:text-8xl font-black italic uppercase tracking-tighter mb-8 leading-[0.9] text-white">
-                    Built by <br />
-                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent drop-shadow-sm">
-                        Builders
-                    </span>
-                </h1>
+                <motion.h1
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 }}
+                    className="text-5xl md:text-8xl font-bold tracking-tight mb-8 leading-[1.05]"
+                >
+                    Build, Launch & <br />
+                    <span className="text-[#07da63]">Trade Startups</span>
+                </motion.h1>
 
-                <p className="text-base md:text-lg text-white/50 mb-12 max-w-xl mx-auto leading-relaxed font-medium">
-                    Foundry is the home for internet builders. Collaborate, hire, build startups,
-                    and trade digital services in one unified ecosystem.
-                </p>
+                <motion.p
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className="text-[#6b7280] text-lg md:text-xl max-w-2xl mx-auto mb-12 leading-relaxed font-medium"
+                >
+                    Foundry is the specialized network for internet builders. Connect with founders, hire talent, and trade digital assets on-chain.
+                </motion.p>
 
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
-                    <button className="w-full sm:w-auto px-10 py-5 bg-primary text-white rounded-2xl font-black italic uppercase tracking-widest glow-primary hover:scale-[1.02] transition-all active:scale-95 shadow-2xl flex items-center justify-center gap-3 group">
-                        Explore Now
-                        <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                    </button>
-                    <button className="w-full sm:w-auto px-10 py-5 bg-white/5 text-white rounded-2xl font-black italic uppercase tracking-widest border border-white/5 hover:bg-white/10 transition-all flex items-center justify-center">
-                        Join Foundry
-                    </button>
-                </div>
-
-                <div className="mt-24 grid grid-cols-2 lg:grid-cols-4 gap-6 max-w-4xl mx-auto">
-                    {[
-                        { name: 'Jobs', desc: 'Hire Talent' },
-                        { name: 'Services', desc: 'Best Escrow' },
-                        { name: 'Startups', desc: 'Buy & Sell' },
-                        { name: 'Blueprints', desc: 'Build Ideas' }
-                    ].map((cat) => (
-                        <div
-                            key={cat.name}
-                            className="glass p-6 rounded-3xl border border-white/5 hover:border-primary/50 transition-all cursor-pointer group text-left relative overflow-hidden"
-                        >
-                            <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <ArrowRight className="w-4 h-4 text-primary" />
-                            </div>
-                            <div className="text-lg font-black italic uppercase mb-1 transition-colors group-hover:text-primary">{cat.name}</div>
-                            <div className="text-[10px] font-bold text-white/30 uppercase tracking-widest">{cat.desc}</div>
-                        </div>
-                    ))}
-                </div>
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                    className="flex flex-col sm:flex-row items-center justify-center gap-4"
+                >
+                    <Link href="/dashboard" className="w-full sm:w-auto px-10 py-4 bg-[#07da63] text-black rounded-xl font-bold text-lg hover:bg-[#08f26e] transition-all flex items-center justify-center gap-2 shadow-[0_0_30px_rgba(7,218,99,0.2)]">
+                        Get Started <ArrowRight size={20} />
+                    </Link>
+                    <Link href="/auth?mode=signup" className="w-full sm:w-auto px-10 py-4 bg-transparent border border-[#1a1a1a] text-white rounded-xl font-bold text-lg hover:bg-white/5 transition-all">
+                        Join Community
+                    </Link>
+                </motion.div>
             </div>
         </section>
     )
