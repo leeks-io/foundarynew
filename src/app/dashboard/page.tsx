@@ -58,33 +58,33 @@ export default function DashboardPage() {
                 {/* Feed Posts */}
                 <div className="divide-y divide-[#1a1a1a]">
                     <SocialPost
-                        name="Sarah Chen" @sarahbuilds" time="2h"
-                    role="Founder"
-                    content="Just crossed $1k MRR with my AI payroll tool! 🚀 The builder community here has been instrumental in our early growth. Next stop: $5k."
-                    likes="142" comments="24" reposts="12" views="2.4k"
-                    avatar="https://i.pravatar.cc/150?img=47"
-                    isPremium
-          />
+                        name="Sarah Chen" handle="@sarahbuilds" time="2h"
+                        role="Founder"
+                        content="Just crossed $1k MRR with my AI payroll tool! 🚀 The builder community here has been instrumental in our early growth. Next stop: $5k."
+                        likes="142" comments="24" reposts="12" views="2.4k"
+                        avatar="https://i.pravatar.cc/150?img=47"
+                        isPremium
+                    />
                     <SocialPost
-                        name="Alex Rivera" @alex" time="4h"
-                    role="Talent"
-                    content="Looking for a React/Solana developer to help with a new marketplace blueprint. Anyone interested in joining the build? DM me! ⬡"
-                    likes="86" comments="15" reposts="8" views="1.8k"
-                    avatar="https://i.pravatar.cc/150?img=33"
-          />
+                        name="Alex Rivera" handle="@alex" time="4h"
+                        role="Talent"
+                        content="Looking for a React/Solana developer to help with a new marketplace blueprint. Anyone interested in joining the build? DM me! ⬡"
+                        likes="86" comments="15" reposts="8" views="1.8k"
+                        avatar="https://i.pravatar.cc/150?img=33"
+                    />
                     <BlueprintPost
                         title="AI tool that summarizes WhatsApp voice notes"
                         tags={["SaaS", "AI"]}
                         interested="42" building="12"
                     />
                     <SocialPost
-                        name="Marcus Thorne" @marcus" time="6h"
-                    role="Freelancer"
-                    content="Completed 3 smart contract audits this week. Open for new gigs! Check my services tab for pricing. 🔒"
-                    likes="124" comments="12" reposts="10" views="3.1k"
-                    avatar="https://i.pravatar.cc/150?img=12"
-                    isPremium
-          />
+                        name="Marcus Thorne" handle="@marcus" time="6h"
+                        role="Freelancer"
+                        content="Completed 3 smart contract audits this week. Open for new gigs! Check my services tab for pricing. 🔒"
+                        likes="124" comments="12" reposts="10" views="3.1k"
+                        avatar="https://i.pravatar.cc/150?img=12"
+                        isPremium
+                    />
                 </div>
             </div>
 
@@ -116,9 +116,9 @@ export default function DashboardPage() {
                 <div className="bg-[#0d0d0d] border border-[#1a1a1a] rounded-2xl p-4">
                     <h3 className="text-xl font-bold mb-4">Trending Builders</h3>
                     <div className="space-y-4">
-                        <TrendingUser name="Elena V." @elena" score="910" img="https://i.pravatar.cc/150?img=44" />
-                        <TrendingUser name="Marcus T." @marcus" score="885" img="https://i.pravatar.cc/150?img=12" />
-                        <TrendingUser name="Sophie L." @sophie" score="840" img="https://i.pravatar.cc/150?img=5" />
+                        <TrendingUser name="Elena V." handle="@elena" score="910" img="https://i.pravatar.cc/150?img=44" />
+                        <TrendingUser name="Marcus T." handle="@marcus" score="885" img="https://i.pravatar.cc/150?img=12" />
+                        <TrendingUser name="Sophie L." handle="@sophie" score="840" img="https://i.pravatar.cc/150?img=5" />
                     </div>
                     <button className="w-full mt-4 text-[#07da63] text-sm font-bold hover:underline py-2">
                         Show more
