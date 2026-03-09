@@ -38,8 +38,8 @@ export function useFreelancerStats() {
                 supabase.from("services").select("*", { count: "exact", head: true }).eq("user_id", user!.id).eq("is_active", true),
                 supabase.from("services").select("rating").eq("user_id", user!.id),
             ])
-            const totalEarned = earned.data?.reduce((sum, o) => sum + (o.amount_usdc || 0), 0) ?? 0
-            const avgRating = rating.data?.length ? (rating.data.reduce((s, r) => s + (r.rating || 0), 0) / rating.data.length).toFixed(1) : "—"
+            const totalEarned = earned.data?.reduce((sum: number, o: any) => sum + (o.amount_usdc || 0), 0) ?? 0
+            const avgRating = rating.data?.length ? (rating.data.reduce((s: number, r: any) => s + (r.rating || 0), 0) / rating.data.length).toFixed(1) : "—"
             return { activeOrders: active.count ?? 0, totalEarned, servicesListed: services.count ?? 0, avgRating }
         },
         enabled: !!user
