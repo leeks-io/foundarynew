@@ -1,0 +1,39 @@
+
+> luminescent-andromeda@0.1.0 build
+> next build
+
+▲ Next.js 16.1.6 (Turbopack)
+- Environments: .env.local
+
+  Creating an optimized production build ...
+
+> Build error occurred
+Error: Turbopack build failed with 1 errors:
+./src/app/globals.css
+Error evaluating Node.js code
+Error: Cannot find module '../lightningcss.win32-x64-msvc.node'
+Require stack:
+- C:\Users\User\.gemini\antigravity\playground\luminescent-andromeda\node_modules\lightningcss\node\index.js
+- C:\Users\User\.gemini\antigravity\playground\luminescent-andromeda\node_modules\@tailwindcss\node\dist\index.js
+- C:\Users\User\.gemini\antigravity\playground\luminescent-andromeda\node_modules\@tailwindcss\postcss\dist\index.js
+- C:\Users\User\.gemini\antigravity\playground\luminescent-andromeda\.next\build\chunks\[root-of-the-server]__51225daf._.js
+- C:\Users\User\.gemini\antigravity\playground\luminescent-andromeda\.next\build\chunks\[turbopack]_runtime.js
+- C:\Users\User\.gemini\antigravity\playground\luminescent-andromeda\.next\build\postcss.js
+    [at Module._resolveFilename (node:internal/modules/cjs/loader:1420:15)]
+    [at defaultResolveImpl (node:internal/modules/cjs/loader:1058:19)]
+    [at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1063:22)]
+    [at Module._load (node:internal/modules/cjs/loader:1226:37)]
+    [at TracingChannel.traceSync (node:diagnostics_channel:328:14)]
+    [at wrapModuleLoad (node:internal/modules/cjs/loader:244:24)]
+    [at Module.require (node:internal/modules/cjs/loader:1503:12)]
+    [at require (node:internal/modules/helpers:152:16)]
+    [at Object.<anonymous> (C:\Users\User\.gemini\antigravity\playground\luminescent-andromeda\node_modules\lightningcss\node\index.js:22:22)]
+    [at Module._compile (node:internal/modules/cjs/loader:1760:14)]
+
+Import trace:
+  Client Component Browser:
+    ./src/app/globals.css [Client Component Browser]
+    ./src/app/layout.tsx [Server Component]
+
+
+    at ignore-listed frames

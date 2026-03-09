@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion'
 import {
-    CheckCircle2, Sparkles, Zap, ShieldCheck,
+    CheckCircle2, Sparkles, Zap, ShieldCheck, CreditCard,
     Rocket, Users, Briefcase, Globe, ArrowRight
 } from 'lucide-react'
 import { cn } from '@/lib/utils'

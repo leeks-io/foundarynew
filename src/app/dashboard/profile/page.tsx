@@ -5,7 +5,7 @@ import { motion } from 'framer-motion'
 import {
     CheckCircle2, MapPin, Link as LinkIcon, Calendar,
     MessageSquare, UserPlus, Zap, MoreHorizontal,
-    ShieldCheck, Star, Briefcase, Rocket, Sparkles
+    ShieldCheck, Star, Briefcase, Rocket, Sparkles, TrendingUp
 } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
