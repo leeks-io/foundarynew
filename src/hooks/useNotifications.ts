@@ -31,7 +31,7 @@ export function useNotifications() {
             .on('postgres_changes', {
                 event: 'INSERT', schema: 'public', table: 'notifications',
                 filter: `user_id=eq.${user.id}`
-            }, (payload) => {
+            }, (payload: any) => {
                 // Refresh notifications
                 queryClient.invalidateQueries({ queryKey: ['notifications', user.id] })
                 // Play notification sound
@@ -42,7 +42,14 @@ export function useNotifications() {
         return () => { supabase.removeChannel(channel) }
     }, [user, queryClient, supabase])
 
-    const unreadCount = query.data?.filter(n => !n.is_read).length ?? 0
+    const unreadCount = query.data?.filter((n: any) => !n.is_read).length ?? 0
+
+    const markAsRead = async (id: string) => {
+        if (!user) return
+        await supabase.from('notifications').update({ is_read: true })
+            .eq("id", id)
+        queryClient.invalidateQueries({ queryKey: ['notifications', user.id] })
+    }
 
     const markAllRead = async () => {
         if (!user) return
@@ -51,5 +58,5 @@ export function useNotifications() {
         queryClient.invalidateQueries({ queryKey: ['notifications', user.id] })
     }
 
-    return { ...query, unreadCount, markAllRead }
+    return { ...query, unreadCount, markAsRead, markAllRead }
 }

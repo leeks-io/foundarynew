@@ -22,7 +22,7 @@ export function useFeed() {
             .channel('feed-realtime')
             .on('postgres_changes', {
                 event: 'INSERT', schema: 'public', table: 'posts'
-            }, (payload) => {
+            }, (payload: any) => {
                 // Optimistically update the feed cache with the new post
                 // We'd ideally fetch the user data for the payload here if it's missing, 
                 // or ensure the payload has it.
