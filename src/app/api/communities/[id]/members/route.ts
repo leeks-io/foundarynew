@@ -1,10 +1,12 @@
+import { NextRequest, NextResponse } from 'next/server'
+
 import { createClient } from '@/utils/supabase/server'
-import { NextResponse } from 'next/server'
 
 export async function GET(
-    request: Request,
-    { params }: { params: { id: string } }
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
 ) {
+    const { id } = await params
     const supabase = await createClient()
 
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -13,7 +15,7 @@ export async function GET(
     const { data: community, error: comError } = await supabase
         .from('communities')
         .select('is_private')
-        .eq('id', params.id)
+        .eq('id', id)
         .single()
 
     if (comError || !community) {
@@ -28,7 +30,7 @@ export async function GET(
         const { data: membership } = await supabase
             .from('community_members')
             .select('role')
-            .eq('community_id', params.id)
+            .eq('community_id', id)
             .eq('user_id', user.id)
             .single()
 
@@ -46,7 +48,7 @@ export async function GET(
             joined_at,
             user:users(id, username, is_premium, builder_score)
         `)
-        .eq('community_id', params.id)
+        .eq('community_id', id)
         .order('joined_at', { ascending: true })
 
     if (error) {

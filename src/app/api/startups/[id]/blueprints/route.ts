@@ -1,10 +1,12 @@
+import { NextRequest, NextResponse } from 'next/server'
+
 import { createClient } from '@/utils/supabase/server'
-import { NextResponse } from 'next/server'
 
 export async function GET(
-    request: Request,
-    { params }: { params: { id: string } }
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
 ) {
+    const { id } = await params
     const supabase = await createClient()
 
     const { data, error } = await supabase
@@ -13,7 +15,7 @@ export async function GET(
             *,
             startup:startups(id, name, stage)
         `)
-        .eq('startup_id', params.id)
+        .eq('startup_id', id)
         .order('created_at', { ascending: false })
 
     if (error) {
@@ -24,9 +26,10 @@ export async function GET(
 }
 
 export async function POST(
-    request: Request,
-    { params }: { params: { id: string } }
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
 ) {
+    const { id } = await params
     const supabase = await createClient()
 
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -46,7 +49,7 @@ export async function POST(
         const { data: startupData } = await supabase
             .from('startups')
             .select('founder_id')
-            .eq('id', params.id)
+            .eq('id', id)
             .single()
 
         if (startupData?.founder_id !== user.id) {
@@ -56,7 +59,7 @@ export async function POST(
         const { data, error } = await supabase
             .from('blueprints')
             .insert({
-                startup_id: params.id,
+                startup_id: id,
                 title,
                 description,
                 bounty_amount,

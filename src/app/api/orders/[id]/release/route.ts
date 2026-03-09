@@ -1,10 +1,12 @@
+import { NextRequest, NextResponse } from 'next/server'
+
 import { createClient } from '@/utils/supabase/server'
-import { NextResponse } from 'next/server'
 
 export async function POST(
-    request: Request,
-    { params }: { params: { id: string } }
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
 ) {
+    const { id } = await params
     const supabase = await createClient()
 
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -17,7 +19,7 @@ export async function POST(
         const { data: orderData, error: orderError } = await supabase
             .from('orders')
             .select('amount, buyer_id, status, service_id')
-            .eq('id', params.id)
+            .eq('id', id)
             .single()
 
         if (orderError || !orderData) {
@@ -55,7 +57,7 @@ export async function POST(
         // sending orderData.amount to freelancerData.wallet_address.
         console.log(`Releasing ${orderData.amount} USDC from Treasury to ${freelancerData.wallet_address}`)
 
-        const simulationSignature = `escrow_release_${params.id}_${Date.now()}`
+        const simulationSignature = `escrow_release_${id}_${Date.now()}`
 
         // 4. Record the payout transaction
         const { error: txError } = await supabase
@@ -76,7 +78,7 @@ export async function POST(
         await supabase
             .from('orders')
             .update({ status: 'completed', updated_at: new Date().toISOString() })
-            .eq('id', params.id)
+            .eq('id', id)
 
         return NextResponse.json({ success: true, message: 'Funds released to freelancer.', signature: simulationSignature }, { status: 200 })
     } catch (error: any) {

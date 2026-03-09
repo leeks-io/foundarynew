@@ -1,10 +1,12 @@
+import { NextRequest, NextResponse } from 'next/server'
+
 import { createClient } from '@/utils/supabase/server'
-import { NextResponse } from 'next/server'
 
 export async function POST(
-    request: Request,
-    { params }: { params: { id: string } }
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
 ) {
+    const { id } = await params
     const supabase = await createClient()
 
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -36,7 +38,7 @@ export async function POST(
         const { data, error } = await supabase
             .from('applications')
             .insert({
-                job_id: params.id,
+                job_id: id,
                 applicant_id: user.id,
                 cover_letter,
                 resume_link

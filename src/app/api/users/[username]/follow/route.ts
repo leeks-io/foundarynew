@@ -1,10 +1,12 @@
+import { NextRequest, NextResponse } from 'next/server'
+
 import { createClient } from '@/utils/supabase/server'
-import { NextResponse } from 'next/server'
 
 export async function GET(
-    request: Request,
-    { params }: { params: { username: string } }
+    request: NextRequest,
+    { params }: { params: Promise<{ username: string }> }
 ) {
+    const { username } = await params
     const supabase = await createClient()
 
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -16,7 +18,7 @@ export async function GET(
     const { data: targetUser, error: targetError } = await supabase
         .from('users')
         .select('id')
-        .eq('username', params.username)
+        .eq('username', username)
         .single()
 
     if (targetError || !targetUser) {
@@ -40,9 +42,10 @@ export async function GET(
 }
 
 export async function POST(
-    request: Request,
-    { params }: { params: { username: string } }
+    request: NextRequest,
+    { params }: { params: Promise<{ username: string }> }
 ) {
+    const { username } = await params
     const supabase = await createClient()
 
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -54,7 +57,7 @@ export async function POST(
     const { data: targetUser, error: targetError } = await supabase
         .from('users')
         .select('id')
-        .eq('username', params.username)
+        .eq('username', username)
         .single()
 
     if (targetError || !targetUser) {

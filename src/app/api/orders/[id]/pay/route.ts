@@ -1,11 +1,13 @@
-import { createClient } from '@/utils/supabase/server'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { Connection } from '@solana/web3.js'
 
+import { createClient } from '@/utils/supabase/server'
+
 export async function POST(
-    request: Request,
-    { params }: { params: { id: string } }
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
 ) {
+    const { id } = await params
     const supabase = await createClient()
 
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -25,7 +27,7 @@ export async function POST(
         const { data: orderData, error: orderError } = await supabase
             .from('orders')
             .select('amount, buyer_id, status')
-            .eq('id', params.id)
+            .eq('id', id)
             .single()
 
         if (orderError || !orderData) {
@@ -43,7 +45,7 @@ export async function POST(
         // 2. Ideally, Verify Transaction against Solana RPC
         // Ensure that orderData.amount USDC was sent to Escrow/Treasury from wallet_address
         const connection = new Connection(process.env.NEXT_PUBLIC_SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com')
-        console.log(`Simulating validation of Escrow Payment: ${signature} for Order ${params.id}`)
+        console.log(`Simulating validation of Escrow Payment: ${signature} for Order ${id}`)
 
         // Record the transaction
         const { error: txError } = await supabase
@@ -69,7 +71,7 @@ export async function POST(
         const { error: updateError } = await supabase
             .from('orders')
             .update({ status: 'in_progress', updated_at: new Date().toISOString() })
-            .eq('id', params.id)
+            .eq('id', id)
 
         if (updateError) throw updateError
 

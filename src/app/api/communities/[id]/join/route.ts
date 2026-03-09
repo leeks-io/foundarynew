@@ -1,10 +1,12 @@
+import { NextRequest, NextResponse } from 'next/server'
+
 import { createClient } from '@/utils/supabase/server'
-import { NextResponse } from 'next/server'
 
 export async function POST(
-    request: Request,
-    { params }: { params: { id: string } }
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
 ) {
+    const { id } = await params
     const supabase = await createClient()
 
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -20,7 +22,7 @@ export async function POST(
         const { data: community, error: comError } = await supabase
             .from('communities')
             .select('is_private, invite_code')
-            .eq('id', params.id)
+            .eq('id', id)
             .single()
 
         if (comError || !community) {
@@ -38,7 +40,7 @@ export async function POST(
         const { error } = await supabase
             .from('community_members')
             .insert({
-                community_id: params.id,
+                community_id: id,
                 user_id: user.id,
                 role: 'member'
             })
@@ -51,9 +53,9 @@ export async function POST(
         }
 
         // Increment member count using rpc ideally, but manual update for simplicity here
-        const { data: countData } = await supabase.from('communities').select('member_count').eq('id', params.id).single()
+        const { data: countData } = await supabase.from('communities').select('member_count').eq('id', id).single()
         if (countData) {
-            await supabase.from('communities').update({ member_count: countData.member_count + 1 }).eq('id', params.id)
+            await supabase.from('communities').update({ member_count: countData.member_count + 1 }).eq('id', id)
         }
 
         return NextResponse.json({ success: true, message: 'Joined community' }, { status: 200 })

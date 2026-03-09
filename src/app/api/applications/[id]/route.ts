@@ -1,10 +1,12 @@
+import { NextRequest, NextResponse } from 'next/server'
+
 import { createClient } from '@/utils/supabase/server'
-import { NextResponse } from 'next/server'
 
 export async function PATCH(
-    request: Request,
-    { params }: { params: { id: string } }
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
 ) {
+    const { id } = await params
     const supabase = await createClient()
 
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -24,7 +26,7 @@ export async function PATCH(
         const { data: appData, error: appError } = await supabase
             .from('applications')
             .select('job_id')
-            .eq('id', params.id)
+            .eq('id', id)
             .single()
 
         if (appError || !appData) {
@@ -45,7 +47,7 @@ export async function PATCH(
         const { data, error } = await supabase
             .from('applications')
             .update({ status, updated_at: new Date().toISOString() })
-            .eq('id', params.id)
+            .eq('id', id)
             .select()
             .single()
 

@@ -1,10 +1,12 @@
+import { NextRequest, NextResponse } from 'next/server'
+
 import { createClient } from '@/utils/supabase/server'
-import { NextResponse } from 'next/server'
 
 export async function GET(
-    request: Request,
-    { params }: { params: { id: string } }
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
 ) {
+    const { id } = await params
     const supabase = await createClient()
 
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -13,7 +15,7 @@ export async function GET(
     }
 
     // Verify user owns this service
-    const { data: serviceInfo } = await supabase.from('services').select('freelancer_id').eq('id', params.id).single()
+    const { data: serviceInfo } = await supabase.from('services').select('freelancer_id').eq('id', id).single()
 
     if (!serviceInfo) {
         return NextResponse.json({ error: 'Service not found' }, { status: 404 })
@@ -29,7 +31,7 @@ export async function GET(
             *,
             buyer:users(id, username, is_premium, builder_score)
         `)
-        .eq('service_id', params.id)
+        .eq('service_id', id)
         .order('created_at', { ascending: false })
 
     if (error) {

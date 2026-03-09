@@ -1,10 +1,12 @@
+import { NextRequest, NextResponse } from 'next/server'
+
 import { createClient } from '@/utils/supabase/server'
-import { NextResponse } from 'next/server'
 
 export async function GET(
-    request: Request,
-    { params }: { params: { id: string } }
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
 ) {
+    const { id } = await params
     const supabase = await createClient()
 
     const { data, error } = await supabase
@@ -13,7 +15,7 @@ export async function GET(
             *,
             founder:users(id, username, is_premium, builder_score)
         `)
-        .eq('id', params.id)
+        .eq('id', id)
         .single()
 
     if (error || !data) {
@@ -24,9 +26,10 @@ export async function GET(
 }
 
 export async function PATCH(
-    request: Request,
-    { params }: { params: { id: string } }
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
 ) {
+    const { id } = await params
     const supabase = await createClient()
 
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -39,7 +42,7 @@ export async function PATCH(
         const { title, description, budget, status } = body
 
         // Only the founder who created the job can edit it
-        const { data: jobInfo } = await supabase.from('jobs').select('founder_id').eq('id', params.id).single()
+        const { data: jobInfo } = await supabase.from('jobs').select('founder_id').eq('id', id).single()
         if (jobInfo?.founder_id !== user.id) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
         }
@@ -53,7 +56,7 @@ export async function PATCH(
         const { data, error } = await supabase
             .from('jobs')
             .update(updates)
-            .eq('id', params.id)
+            .eq('id', id)
             .select()
             .single()
 
@@ -66,9 +69,10 @@ export async function PATCH(
 }
 
 export async function DELETE(
-    request: Request,
-    { params }: { params: { id: string } }
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
 ) {
+    const { id } = await params
     const supabase = await createClient()
 
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -77,7 +81,7 @@ export async function DELETE(
     }
 
     // Only the founder who created the job can delete it
-    const { data: jobInfo } = await supabase.from('jobs').select('founder_id').eq('id', params.id).single()
+    const { data: jobInfo } = await supabase.from('jobs').select('founder_id').eq('id', id).single()
     if (jobInfo?.founder_id !== user.id) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
@@ -85,7 +89,7 @@ export async function DELETE(
     const { error } = await supabase
         .from('jobs')
         .delete()
-        .eq('id', params.id)
+        .eq('id', id)
 
     if (error) {
         return NextResponse.json({ error: error.message }, { status: 500 })

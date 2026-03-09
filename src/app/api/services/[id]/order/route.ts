@@ -1,10 +1,12 @@
+import { NextRequest, NextResponse } from 'next/server'
+
 import { createClient } from '@/utils/supabase/server'
-import { NextResponse } from 'next/server'
 
 export async function POST(
-    request: Request,
-    { params }: { params: { id: string } }
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
 ) {
+    const { id } = await params
     const supabase = await createClient()
 
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -20,7 +22,7 @@ export async function POST(
         const { data: serviceData, error: serviceError } = await supabase
             .from('services')
             .select('price')
-            .eq('id', params.id)
+            .eq('id', id)
             .single()
 
         if (serviceError || !serviceData) {
@@ -32,7 +34,7 @@ export async function POST(
         const { data, error } = await supabase
             .from('orders')
             .insert({
-                service_id: params.id,
+                service_id: id,
                 buyer_id: user.id,
                 amount: serviceData.price,
                 status: 'pending', // Waiting for blockchain payment verifiation

@@ -1,10 +1,12 @@
+import { NextRequest, NextResponse } from 'next/server'
+
 import { createClient } from '@/utils/supabase/server'
-import { NextResponse } from 'next/server'
 
 export async function GET(
-    request: Request,
-    { params }: { params: { username: string } }
+    request: NextRequest,
+    { params }: { params: Promise<{ username: string }> }
 ) {
+    const { username } = await params
     const supabase = await createClient()
 
     // Public lookup, so we don't necessarily require auth to view
@@ -18,7 +20,7 @@ export async function GET(
             builder_score,
             created_at
         `)
-        .eq('username', params.username)
+        .eq('username', username)
         .single()
 
     if (userError || !userData) {

@@ -1,10 +1,12 @@
+import { NextRequest, NextResponse } from 'next/server'
+
 import { createClient } from '@/utils/supabase/server'
-import { NextResponse } from 'next/server'
 
 export async function GET(
-    request: Request,
-    { params }: { params: { id: string } }
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
 ) {
+    const { id } = await params
     const supabase = await createClient()
 
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -13,7 +15,7 @@ export async function GET(
     }
 
     // Verify user owns this job
-    const { data: jobInfo } = await supabase.from('jobs').select('founder_id').eq('id', params.id).single()
+    const { data: jobInfo } = await supabase.from('jobs').select('founder_id').eq('id', id).single()
 
     if (!jobInfo) {
         return NextResponse.json({ error: 'Job not found' }, { status: 404 })
@@ -30,7 +32,7 @@ export async function GET(
             applicant:users(id, username, is_premium, builder_score),
             profile:profiles!inner(bio, skills, portfolio_links)
         `)
-        .eq('job_id', params.id)
+        .eq('job_id', id)
         // Manual join trick since applicant_id matches profiles.user_id
         .eq('profiles.user_id', 'applicant.id') // Handled by Supabase relationships if foreign keys are correct
 
@@ -42,7 +44,7 @@ export async function GET(
                 *,
                 applicant:users(id, username, is_premium, builder_score)
             `)
-            .eq('job_id', params.id)
+            .eq('job_id', id)
 
         if (simpleError) return NextResponse.json({ error: simpleError.message }, { status: 500 })
         return NextResponse.json({ applications: simpleData })
