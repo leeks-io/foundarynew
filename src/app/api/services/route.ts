@@ -9,8 +9,9 @@ export async function GET(request: Request) {
         .from('services')
         .select(`
             *,
-            freelancer:users(id, username, is_premium, builder_score)
+            profiles:profiles(id, username, full_name, avatar_url, role)
         `)
+        .eq('is_active', true)
         .order('created_at', { ascending: false })
 
     if (searchParams.get('category')) {
@@ -19,33 +20,29 @@ export async function GET(request: Request) {
 
     const { data, error } = await query
 
-    if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 })
-    }
-
-    return NextResponse.json({ services: data })
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json(data ?? [])
 }
 
 export async function POST(request: Request) {
     const supabase = await createClient()
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     // Role check - Only freelancers can post services
-    const { data: userData } = await supabase.from('users').select('role, is_premium').eq('id', user.id).single()
-    if (userData?.role !== 'freelancer') {
+    const { data: profile } = await supabase.from('profiles').select('role, is_premium').eq('id', session.user.id).single()
+    if (profile?.role !== 'freelancer') {
         return NextResponse.json({ error: 'Only freelancers can list services' }, { status: 403 })
     }
 
     // Free tier enforcement: Max 1 active service per free tier freelancer
-    if (!userData?.is_premium) {
+    if (!profile?.is_premium) {
         const { count } = await supabase
             .from('services')
             .select('*', { count: 'exact', head: true })
-            .eq('freelancer_id', user.id)
+            .eq('seller_id', session.user.id)
+            .eq('is_active', true)
 
         if (count && count >= 1) {
             return NextResponse.json({ error: 'Free tier permits only 1 active service listing. Please upgrade to premium.' }, { status: 402 })
@@ -54,7 +51,7 @@ export async function POST(request: Request) {
 
     try {
         const body = await request.json()
-        const { title, description, price, delivery_time_days, revisions, category, image_url } = body
+        const { title, description, price, delivery_days, category, tags } = body
 
         if (!title || !description || price === undefined) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -63,21 +60,21 @@ export async function POST(request: Request) {
         const { data, error } = await supabase
             .from('services')
             .insert({
-                freelancer_id: user.id,
+                seller_id: session.user.id,
                 title,
                 description,
-                price,
-                delivery_time_days: delivery_time_days || 3,
-                revisions: revisions || 1,
-                category: category || 'General',
-                image_url
+                price: Number(price),
+                delivery_days: Number(delivery_days) || 3,
+                category: category || null,
+                tags: tags || [],
+                is_active: true
             })
-            .select()
+            .select('*, profiles:profiles(id, username, full_name, avatar_url, role)')
             .single()
 
         if (error) throw error
 
-        return NextResponse.json({ service: data }, { status: 201 })
+        return NextResponse.json(data, { status: 201 })
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 400 })
     }

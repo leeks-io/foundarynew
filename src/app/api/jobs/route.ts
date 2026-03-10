@@ -5,72 +5,67 @@ export async function GET(request: Request) {
     const supabase = await createClient()
     const { searchParams } = new URL(request.url)
 
-    // pagination setup placeholder
-    // const page = parseInt(searchParams.get('page') || '1')
-    // const limit = parseInt(searchParams.get('limit') || '10')
-
     let query = supabase
         .from('jobs')
         .select(`
             *,
-            founder:users(id, username, is_premium, builder_score)
+            profiles:profiles(id, username, full_name, avatar_url, role)
         `)
-        .eq('status', 'open')
+        .eq('is_active', true)
         .order('created_at', { ascending: false })
 
-    // Optional filters can be added here
     if (searchParams.get('type')) {
-        query = query.eq('job_type', searchParams.get('type'))
+        query = query.eq('type', searchParams.get('type'))
     }
 
     const { data, error } = await query
 
-    if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 })
-    }
-
-    return NextResponse.json({ jobs: data })
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json(data ?? [])
 }
 
 export async function POST(request: Request) {
     const supabase = await createClient()
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     // Role check - Only founders can post jobs
-    const { data: userData } = await supabase.from('users').select('role').eq('id', user.id).single()
-    if (userData?.role !== 'founder') {
+    const { data: profile } = await supabase.from('profiles').select('role, is_premium').eq('id', session.user.id).single()
+    if (profile?.role !== 'founder') {
         return NextResponse.json({ error: 'Only founders can post jobs' }, { status: 403 })
     }
 
     try {
         const body = await request.json()
-        const { title, description, budget, job_type, is_remote, skills_required } = body
+        const { title, description, company, location, type, salary_min, salary_max, currency, skills, is_remote } = body
 
-        if (!title || !description || !job_type) {
+        if (!title || !description || !type) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
         }
 
         const { data, error } = await supabase
             .from('jobs')
             .insert({
-                founder_id: user.id,
+                poster_id: session.user.id,
                 title,
                 description,
-                budget,
-                job_type,
+                company: company || null,
+                location: location || null,
+                type,
+                salary_min: Number(salary_min) || null,
+                salary_max: Number(salary_max) || null,
+                currency: currency || 'USD',
+                skills: skills || [],
                 is_remote: is_remote ?? true,
-                skills_required: skills_required || []
+                is_active: true
             })
-            .select()
+            .select('*, profiles:profiles(id, username, full_name, avatar_url, role)')
             .single()
 
         if (error) throw error
 
-        return NextResponse.json({ job: data }, { status: 201 })
+        return NextResponse.json(data, { status: 201 })
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 400 })
     }

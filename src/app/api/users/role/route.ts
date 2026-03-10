@@ -4,23 +4,21 @@ import { NextResponse } from 'next/server'
 export async function PATCH(request: Request) {
     const supabase = await createClient()
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     try {
         const body = await request.json()
-        const { role } = body // 'jobseeker', 'freelancer', or 'founder'
+        const { role } = body
 
-        if (!['jobseeker', 'freelancer', 'founder'].includes(role)) {
+        if (!['founder', 'freelancer', 'jobseeker', 'investor'].includes(role)) {
             return NextResponse.json({ error: 'Invalid role provided' }, { status: 400 })
         }
 
         const { data, error } = await supabase
-            .from('users')
+            .from('profiles')
             .update({ role })
-            .eq('id', user.id)
+            .eq('id', session.user.id)
             .select('role')
             .single()
 

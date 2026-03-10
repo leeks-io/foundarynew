@@ -9,8 +9,9 @@ export async function GET(request: Request) {
         .from('startups')
         .select(`
             *,
-            founder:users(id, username, is_premium, builder_score)
+            profiles:profiles(id, username, full_name, avatar_url, role)
         `)
+        .eq('is_public', true)
         .order('created_at', { ascending: false })
 
     if (searchParams.get('stage')) {
@@ -19,53 +20,50 @@ export async function GET(request: Request) {
 
     const { data, error } = await query
 
-    if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 })
-    }
-
-    return NextResponse.json({ startups: data })
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json(data ?? [])
 }
 
 export async function POST(request: Request) {
     const supabase = await createClient()
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     // Role check - Only founders can register startups
-    const { data: userData } = await supabase.from('users').select('role, is_premium').eq('id', user.id).single()
-    if (userData?.role !== 'founder') {
+    const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single()
+    if (profile?.role !== 'founder') {
         return NextResponse.json({ error: 'Only founders can register startups' }, { status: 403 })
     }
 
     try {
         const body = await request.json()
-        const { name, one_liner, description, industry, stage, website_url, logo_url } = body
+        const { name, tagline, description, industry, stage, website, logo_url, looking_for } = body
 
-        if (!name || !one_liner || !industry) {
+        if (!name || !tagline || !industry) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
         }
 
         const { data, error } = await supabase
             .from('startups')
             .insert({
-                founder_id: user.id,
+                founder_id: session.user.id,
                 name,
-                one_liner,
+                tagline,
                 description,
                 industry,
                 stage: stage || 'idea',
-                website_url,
-                logo_url
+                website: website || null,
+                logo_url: logo_url || null,
+                looking_for: looking_for || [],
+                is_public: true
             })
-            .select()
+            .select('*, profiles:profiles(id, username, full_name, avatar_url, role)')
             .single()
 
         if (error) throw error
 
-        return NextResponse.json({ startup: data }, { status: 201 })
+        return NextResponse.json(data, { status: 201 })
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 400 })
     }
