@@ -1,95 +1,20 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-@theme inline {
-  --color-background: #000000;
-  --color-foreground: #FFFFFF;
-  --color-primary: #07da63;
-  --color-accent: #08f26e;
-  --color-muted: #6b7280;
-  --color-border: #1a1a1a;
-  --color-surface: #0d0d0d;
-  --color-surface-hover: #111111;
-
-  --font-sans: "DM Sans", system-ui, sans-serif;
-  --font-dmsans: "DM Sans", sans-serif;
-  --font-space: "Space Grotesk", sans-serif;
-}
-
-:root {
-  --background: #000000;
-  --foreground: #FFFFFF;
-  --primary: #07da63;
-  --accent: #08f26e;
-  --muted: #6b7280;
-  --border: #1a1a1a;
-  --surface: #0d0d0d;
-  --font-dmsans: "DM Sans", sans-serif;
-  --font-space: "Space Grotesk", sans-serif;
-}
-
-* {
-  border-color: var(--border);
-}
-
-body {
-  background-color: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-dmsans);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  min-height: 100vh;
-}
-
-/* X-Style Utilities */
-.glow-primary {
-  box-shadow: 0 0 20px rgba(7, 218, 99, 0.2);
-}
-
-.glow-accent {
-  box-shadow: 0 0 20px rgba(8, 242, 110, 0.3);
-}
-
-.text-glow-green {
-  text-shadow: 0 0 8px rgba(7, 218, 99, 0.4);
-}
-
-.glass {
-  background: rgba(13, 13, 13, 0.7);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--border);
-}
-
-.glass-card {
-  background: #0d0d0d;
-  border: 1px solid var(--border);
-  transition: all 0.2s ease-in-out;
-}
-
-.glass-card:hover {
-  background: #111111;
-  border-color: var(--primary);
-}
-
-/* Tight spacing utilities */
-.spacing-tight {
-  letter-spacing: -0.01em;
-}
-
-@keyframes float {
-  0% {
-    transform: translateY(0px);
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 
-  50% {
-    transform: translateY(-5px);
-  }
-
-  100% {
-    transform: translateY(0px);
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
   }
 }
 
-.animate-float {
-  animation: float 4s ease-in-out infinite;
+@layer components {
+  .inp {
+    @apply w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-xl text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-500 transition-colors;
+  }
 }

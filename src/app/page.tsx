@@ -1,315 +1,135 @@
-'use client'
+import Link from 'next/link'
+import { createClient } from '@/utils/supabase/server'
+import { ArrowRight, Briefcase, Wrench, Rocket, Users } from 'lucide-react'
+
 export const dynamic = 'force-dynamic'
 
-import { motion } from 'framer-motion'
-import { CheckCircle2, Star, TrendingUp, Users, ArrowRight, Rocket, Briefcase, Zap, ShoppingCart, Lightbulb } from 'lucide-react'
-import Link from 'next/link'
-import Navbar from '@/components/layout/Navbar'
-import { useEffect, useState } from 'react'
-import { createSupabaseBrowserClient } from '@/utils/supabase/client'
+export default async function HomePage() {
+  const supabase = await createClient()
 
-interface Blueprint {
-  title: string
-  tags: string[]
-  price: string
-}
+  // Fetch real stats
+  const [
+    { count: userCount },
+    { count: jobCount },
+    { count: serviceCount },
+    { count: startupCount },
+  ] = await Promise.all([
+    supabase.from('profiles').select('*', { count: 'exact', head: true }),
+    supabase.from('jobs').select('*', { count: 'exact', head: true }).eq('is_active', true),
+    supabase.from('services').select('*', { count: 'exact', head: true }).eq('is_active', true),
+    supabase.from('startups').select('*', { count: 'exact', head: true }),
+  ])
 
-export default function Home() {
-  const [trendingBuilders, setTrendingBuilders] = useState<any[]>([])
-  const [featuredServices, setFeaturedServices] = useState<any[]>([])
-  const [blueprints, setBlueprints] = useState<Blueprint[]>([])
-  const [loading, setLoading] = useState(true)
-
-  const supabase = createSupabaseBrowserClient()
-
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true)
-      try {
-        // Fetch trending builders (top builder score)
-        const { data: builders } = await supabase
-          .from('users')
-          .select('id, username, role, builder_score, profiles(profile_image)')
-          .order('builder_score', { ascending: false })
-          .limit(4)
-
-        // Fetch featured services
-        const { data: services } = await supabase
-          .from('services')
-          .select('id, title, price_usdc, rating, images, user_id, users(username)')
-          .eq('is_active', true)
-          .limit(3)
-
-        // Fetch blueprint ideas
-        const { data: bprints } = await supabase
-          .from('blueprints')
-          .select('*')
-          .limit(2)
-
-        if (builders) setTrendingBuilders(builders.map((b: any) => ({
-          name: b.username,
-          role: b.role,
-          score: b.builder_score,
-          img: (b.profiles as any)?.profile_image || `https://i.pravatar.cc/150?u=${b.username}`
-        })))
-
-        if (services) setFeaturedServices(services.map((s: any) => ({
-          title: s.title,
-          provider: (s.users as any)?.username || "Unknown",
-          price: s.price_usdc,
-          rating: s.rating,
-          img: s.images?.[0] || `https://i.pravatar.cc/150?u=${s.id}`
-        })))
-
-        if (bprints) setBlueprints(bprints.map((bp: any) => ({
-          title: bp.title,
-          tags: bp.tech_stack || [],
-          price: bp.price_usdc > 0 ? `${bp.price_usdc} USDC` : "Free"
-        })))
-
-      } catch (err) {
-        console.error("Error fetching homepage data:", err)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchData()
-  }, [supabase])
-
-  if (loading) {
-    return (
-      <div className="bg-black text-white min-h-screen flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="text-[#07da63] text-4xl animate-pulse">⬡</div>
-          <p className="text-[#6b7280] text-sm font-bold uppercase tracking-widest">Loading Foundry...</p>
-        </div>
-      </div>
-    )
-  }
+  const stats = [
+    { label: 'Builders', value: userCount ?? 0 },
+    { label: 'Open Jobs', value: jobCount ?? 0 },
+    { label: 'Services', value: serviceCount ?? 0 },
+    { label: 'Startups', value: startupCount ?? 0 },
+  ]
 
   return (
-    <div className="bg-black text-white min-h-screen selection:bg-[#07da63]/30">
-      <Navbar />
+    <div className="min-h-screen bg-black text-white flex flex-col">
+      {/* Nav */}
+      <header className="flex items-center justify-between px-4 sm:px-8 py-4 border-b border-zinc-900">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 bg-white rounded-lg flex items-center justify-center">
+            <span className="text-black font-bold text-sm">F</span>
+          </div>
+          <span className="font-semibold tracking-tight text-white">Foundry</span>
+        </div>
+        <nav className="hidden md:flex items-center gap-6 text-sm text-zinc-400">
+          <Link href="/dashboard/explore" className="hover:text-white transition-colors">Explore</Link>
+          <Link href="/dashboard/jobs" className="hover:text-white transition-colors">Jobs</Link>
+          <Link href="/dashboard/services" className="hover:text-white transition-colors">Services</Link>
+          <Link href="/dashboard/startups" className="hover:text-white transition-colors">Startups</Link>
+          <Link href="/dashboard/communities" className="hover:text-white transition-colors">Communities</Link>
+        </nav>
+        <div className="flex items-center gap-2 sm:gap-3">
+          <Link href="/auth" className="px-3 sm:px-4 py-1.5 sm:py-2 text-sm text-zinc-400 hover:text-white transition-colors">
+            Sign In
+          </Link>
+          <Link href="/auth" className="px-3 sm:px-4 py-1.5 sm:py-2 bg-white text-black rounded-xl text-sm font-medium hover:bg-zinc-200 transition-colors">
+            Join Foundry
+          </Link>
+        </div>
+      </header>
 
-      {/* Hero Section */}
-      <section className="pt-32 pb-20 px-6 border-b border-[#1a1a1a]">
-        <div className="max-w-[1200px] mx-auto text-center">
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-5xl md:text-7xl font-bold tracking-tight mb-6 leading-[1.1]"
-          >
-            The Marketplace for <br />
-            <span className="text-[#07da63]">Internet Builders</span>
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-[#6b7280] text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed font-medium"
-          >
-            Foundry brings founders, freelancers, and job seekers together to build, launch, and trade the future of the web.
-          </motion.p>
+      {/* Hero */}
+      <main className="flex-1 flex flex-col items-center justify-center text-center px-4 sm:px-6 py-16 sm:py-24">
+        <div className="max-w-3xl mx-auto space-y-6 sm:space-y-8">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-full text-xs text-zinc-400">
+            <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
+            The network for builders
+          </div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16"
-          >
-            <Link href="/dashboard" className="w-full sm:w-auto px-10 py-4 bg-[#07da63] text-black rounded-lg font-bold text-lg hover:bg-[#08f26e] transition-all flex items-center justify-center gap-2">
-              Explore <ArrowRight size={20} />
+          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-tight tracking-tight">
+            Build, Launch &
+            <br />
+            <span className="text-zinc-500">Grow Together</span>
+          </h1>
+
+          <p className="text-base sm:text-lg text-zinc-400 max-w-xl mx-auto leading-relaxed">
+            Foundry connects founders, freelancers, and builders. Find jobs, offer services, launch your startup, and join communities that move fast.
+          </p>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Link
+              href="/auth"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-white text-black rounded-xl font-medium hover:bg-zinc-200 transition-colors text-sm sm:text-base"
+            >
+              Get started free <ArrowRight className="w-4 h-4" />
             </Link>
-            <Link href="/auth?mode=signup" className="w-full sm:w-auto px-10 py-4 bg-transparent border border-[#1a1a1a] text-white rounded-lg font-bold text-lg hover:bg-white/5 transition-all">
-              Join Foundry
+            <Link
+              href="/dashboard/explore"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-zinc-900 border border-zinc-800 text-white rounded-xl font-medium hover:bg-zinc-800 transition-colors text-sm sm:text-base"
+            >
+              Browse the network
             </Link>
-          </motion.div>
+          </div>
+        </div>
 
-          <div className="flex flex-wrap justify-center gap-3">
-            {['Jobs', 'Services', 'Startups', 'Communities'].map((cat) => (
-              <span key={cat} className="px-5 py-2 rounded-full border border-[#1a1a1a] text-sm font-medium text-[#6b7280] hover:text-[#07da63] hover:border-[#07da63]/50 transition-all cursor-pointer">
-                {cat}
-              </span>
+        {/* Live stats */}
+        {(userCount ?? 0) > 0 && (
+          <div className="mt-16 sm:mt-20 grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-8 w-full max-w-2xl">
+            {stats.map(({ label, value }) => (
+              <div key={label} className="text-center">
+                <p className="text-2xl sm:text-3xl font-bold text-white">{value.toLocaleString()}</p>
+                <p className="text-xs sm:text-sm text-zinc-500 mt-1">{label}</p>
+              </div>
             ))}
           </div>
-        </div>
-      </section>
+        )}
 
-      {/* Trending Builders */}
-      <section className="py-20 px-6 border-b border-[#1a1a1a]">
-        <div className="max-w-[1200px] mx-auto">
-          <h2 className="text-2xl font-bold mb-10">Trending Builders</h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            {trendingBuilders.length > 0 ? trendingBuilders.map((builder, index) => (
-              <motion.div
-                key={builder.name}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                viewport={{ once: true }}
-                className="bg-[#0d0d0d] border border-[#1a1a1a] p-6 rounded-2xl hover:border-[#07da63]/30 transition-all group"
-              >
-                <div className="flex flex-col items-center text-center">
-                  <div className="w-20 h-20 rounded-full border-2 border-[#07da63]/20 p-1 mb-4 group-hover:border-[#07da63] transition-colors">
-                    <img src={builder.img} alt={builder.name} className="w-full h-full rounded-full object-cover" />
-                  </div>
-                  <h3 className="font-bold text-lg mb-1 flex items-center gap-1">
-                    {builder.name}
-                    <CheckCircle2 size={14} className="text-[#07da63]" />
-                  </h3>
-                  <p className="text-[#6b7280] text-sm mb-4 font-medium">{builder.role || 'Foundry Builder'}</p>
-                  <div className="bg-[#1a1a1a] rounded-lg px-4 py-2 w-full">
-                    <span className="text-[#07da63] font-black text-xl">{builder.score}</span>
-                    <span className="text-[10px] text-[#6b7280] font-black uppercase tracking-widest block">Builder Score</span>
-                  </div>
-                </div>
-              </motion.div>
-            )) : (
-              <p className="col-span-4 text-center py-10 text-[#6b7280] font-bold">No trending builders yet.</p>
-            )}
-          </div>
-        </div>
-      </section>
-
-      {/* Services Preview */}
-      <section className="py-20 px-6 border-b border-[#1a1a1a]">
-        <div className="max-w-[1200px] mx-auto">
-          <h2 className="text-2xl font-bold mb-10">Services</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {featuredServices.length > 0 ? featuredServices.map((service) => (
-              <div key={service.title} className="bg-[#0d0d0d] border border-[#1a1a1a] rounded-2xl overflow-hidden group hover:border-[#07da63]/30 transition-all">
-                <div className="aspect-[4/3] bg-[#1a1a1a] relative">
-                  <img src={service.img} alt={service.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                  <div className="absolute top-4 left-4 flex gap-2">
-                    <span className="bg-[#07da63] text-black text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded">Featured</span>
-                  </div>
-                </div>
-                <div className="p-5">
-                  <h3 className="font-bold text-lg mb-2 line-clamp-2 leading-snug group-hover:text-[#07da63] transition-colors">{service.title}</h3>
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="w-6 h-6 rounded-full bg-[#1a1a1a]" />
-                    <span className="text-sm text-[#6b7280] font-medium">by <span className="text-white">@{service.provider}</span></span>
-                  </div>
-                  <div className="pt-4 border-t border-[#1a1a1a] flex items-center justify-between">
-                    <div className="flex items-center gap-1 text-[#07da63]">
-                      <Star size={14} className="text-[#07da63] fill-[#07da63]" />
-                      <span className="text-sm font-bold">{service.rating}</span>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-xs text-[#6b7280] block font-medium">Starting at</span>
-                      <span className="text-lg font-bold text-[#07da63]">{service.price} USDC</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )) : (
-              <p className="col-span-3 text-center py-10 text-[#6b7280] font-bold">No services featured yet.</p>
-            )}
-          </div>
-        </div>
-      </section>
-
-      {/* Blueprints Section */}
-      <section className="py-20 px-6 border-b border-[#1a1a1a]">
-        <div className="max-w-[1200px] mx-auto">
-          <h2 className="text-2xl font-bold mb-10">Blueprint Ideas</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {blueprints.length > 0 ? blueprints.map((idea) => (
-              <div key={idea.title} className="bg-[#0d0d0d] border border-[#1a1a1a] border-l-4 border-l-[#07da63] p-6 rounded-r-2xl">
-                <h3 className="text-xl font-bold mb-3">{idea.title}</h3>
-                <div className="flex gap-2 mb-6">
-                  {idea.tags.map((tag: string) => (
-                    <span key={tag} className="px-3 py-1 bg-[#111111] text-[10px] font-bold text-[#6b7280] uppercase tracking-widest rounded-md border border-[#1a1a1a]">{tag}</span>
-                  ))}
-                  <span className="ml-auto text-[#07da63] font-bold text-sm">{idea.price}</span>
-                </div>
-                <div className="flex gap-3">
-                  <button className="flex-1 bg-[#07da63] text-black py-2 rounded-lg font-bold text-xs">Join Build</button>
-                  <button className="flex-1 border border-[#1a1a1a] text-white py-2 rounded-lg font-bold text-xs hover:bg-white/5 transition-all">Buy Idea</button>
-                  <button className="flex-1 border border-[#1a1a1a] text-white py-2 rounded-lg font-bold text-xs hover:bg-white/5 transition-all">Discuss</button>
-                </div>
-              </div>
-            )) : (
-              <p className="col-span-2 text-center py-10 text-[#6b7280] font-bold">No blueprints available yet.</p>
-            )}
-          </div>
-        </div>
-      </section>
-
-      {/* Startup Marketplace */}
-      <section className="py-20 px-6 border-b border-[#1a1a1a]">
-        <div className="max-w-[1200px] mx-auto">
-          <h2 className="text-2xl font-bold mb-10">Startup Marketplace</h2>
-          <div className="bg-[#0d0d0d] border border-[#1a1a1a] px-8 py-10 rounded-[2.5rem] flex flex-col md:flex-row items-center justify-between gap-8 group hover:border-[#07da63]/30 transition-all">
-            <div className="flex items-center gap-6">
-              <div className="w-16 h-16 bg-[#1a1a1a] rounded-2xl flex items-center justify-center text-[#07da63]">
-                <Rocket size={32} />
-              </div>
+        {/* Feature cards */}
+        <div className="mt-16 sm:mt-24 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full max-w-5xl">
+          {[
+            { icon: Briefcase, label: 'Jobs', desc: 'Full-time, freelance, and contract roles', href: '/dashboard/jobs', color: 'text-blue-400' },
+            { icon: Wrench, label: 'Services', desc: 'Hire skilled freelancers for any project', href: '/dashboard/services', color: 'text-purple-400' },
+            { icon: Rocket, label: 'Startups', desc: 'Discover and support early-stage ventures', href: '/dashboard/startups', color: 'text-orange-400' },
+            { icon: Users, label: 'Communities', desc: 'Find your people and grow together', href: '/dashboard/communities', color: 'text-green-400' },
+          ].map(({ icon: Icon, label, desc, href, color }) => (
+            <Link
+              key={label}
+              href={href}
+              className="group flex flex-col gap-3 p-5 bg-zinc-950 border border-zinc-800/80 rounded-2xl hover:border-zinc-700 hover:bg-zinc-900 transition-all text-left"
+            >
+              <Icon className={`w-6 h-6 ${color}`} />
               <div>
-                <h3 className="text-2xl font-bold mb-2">Acquire Verified Startups</h3>
-                <p className="text-[#6b7280] text-sm font-medium">Browse 400+ SaaS, Web3, and AI businesses for sale.</p>
+                <p className="font-semibold text-white text-sm">{label}</p>
+                <p className="text-zinc-500 text-xs mt-1 leading-relaxed">{desc}</p>
               </div>
-            </div>
-            <div className="flex items-center gap-12">
-              <div className="text-center">
-                <span className="text-[#6b7280] text-xs font-bold uppercase tracking-widest block mb-1">Listings</span>
-                <span className="text-xl font-bold">428</span>
-              </div>
-              <div className="text-center">
-                <span className="text-[#6b7280] text-xs font-bold uppercase tracking-widest block mb-1">Volume</span>
-                <span className="text-xl font-bold">12.4M</span>
-              </div>
-              <Link href="/dashboard/startups" className="px-8 py-3 bg-[#07da63] text-black rounded-lg font-bold hover:bg-[#08f26e] transition-all">
-                View Startup
-              </Link>
-            </div>
-          </div>
+              <ArrowRight className="w-3.5 h-3.5 text-zinc-700 group-hover:text-zinc-400 transition-colors mt-auto" />
+            </Link>
+          ))}
         </div>
-      </section>
+      </main>
 
       {/* Footer */}
-      <footer className="py-20 px-6">
-        <div className="max-w-[1200px] mx-auto grid grid-cols-2 md:grid-cols-4 gap-12 mb-16">
-          <div>
-            <h4 className="font-bold mb-6 text-sm uppercase tracking-widest text-[#6b7280]">Platform</h4>
-            <ul className="space-y-4 text-[15px] font-medium text-[#6b7280]">
-              <li><Link href="/dashboard/jobs" className="hover:text-white transition-colors">Jobs</Link></li>
-              <li><Link href="/dashboard/services" className="hover:text-white transition-colors">Services</Link></li>
-              <li><Link href="/dashboard/startups" className="hover:text-white transition-colors">Startups</Link></li>
-              <li><Link href="/dashboard/blueprints" className="hover:text-white transition-colors">Blueprints</Link></li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="font-bold mb-6 text-sm uppercase tracking-widest text-[#6b7280]">Resources</h4>
-            <ul className="space-y-4 text-[15px] font-medium text-[#6b7280]">
-              <li><Link href="#" className="hover:text-white transition-colors">Documentation</Link></li>
-              <li><Link href="#" className="hover:text-white transition-colors">API</Link></li>
-              <li><Link href="#" className="hover:text-white transition-colors">Tutorials</Link></li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="font-bold mb-6 text-sm uppercase tracking-widest text-[#6b7280]">Legal</h4>
-            <ul className="space-y-4 text-[15px] font-medium text-[#6b7280]">
-              <li><Link href="#" className="hover:text-white transition-colors">Terms</Link></li>
-              <li><Link href="#" className="hover:text-white transition-colors">Privacy</Link></li>
-              <li><Link href="#" className="hover:text-white transition-colors">Escrow Policy</Link></li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="font-bold mb-6 text-sm uppercase tracking-widest text-[#6b7280]">Community</h4>
-            <ul className="space-y-4 text-[15px] font-medium text-[#6b7280]">
-              <li><Link href="/dashboard/communities" className="hover:text-white transition-colors">All Communities</Link></li>
-              <li><Link href="#" className="hover:text-white transition-colors">X / Twitter</Link></li>
-              <li><Link href="#" className="hover:text-white transition-colors">Discord</Link></li>
-            </ul>
-          </div>
-        </div>
-        <div className="max-w-[1200px] mx-auto pt-8 border-t border-[#1a1a1a] flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2 text-white/50 text-sm font-medium">
-            <span className="text-[#07da63]">⬡</span> <span>Foundry Network</span>
-          </div>
-          <p className="text-[#6b7280] text-sm font-medium">© 2025 Foundry Network · foundrynetwork.space</p>
+      <footer className="border-t border-zinc-900 px-4 sm:px-8 py-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-zinc-600 text-xs">
+        <p>© {new Date().getFullYear()} Foundry Network</p>
+        <div className="flex items-center gap-4">
+          <Link href="/auth" className="hover:text-zinc-400 transition-colors">Sign in</Link>
+          <Link href="/auth" className="hover:text-zinc-400 transition-colors">Join</Link>
         </div>
       </footer>
     </div>
