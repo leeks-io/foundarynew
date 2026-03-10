@@ -9,11 +9,11 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { data, error } = await supabase
-        .from('users')
+    const { data, error } = await (supabase
+        .from('profiles')
         .select('builder_score, is_premium')
         .eq('id', user.id)
-        .single()
+        .single() as any)
 
     if (error) {
         return NextResponse.json({ error: error.message }, { status: 500 })

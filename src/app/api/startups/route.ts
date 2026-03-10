@@ -31,7 +31,7 @@ export async function POST(request: Request) {
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     // Role check - Only founders can register startups
-    const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single()
+    const { data: profile } = await (supabase.from('profiles').select('role').eq('id', session.user.id).single() as any)
     if (profile?.role !== 'founder') {
         return NextResponse.json({ error: 'Only founders can register startups' }, { status: 403 })
     }
@@ -44,8 +44,8 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
         }
 
-        const { data, error } = await supabase
-            .from('startups')
+        const { data, error } = await (supabase
+            .from('startups') as any)
             .insert({
                 founder_id: session.user.id,
                 name,

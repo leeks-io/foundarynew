@@ -25,8 +25,8 @@ export async function POST(request: Request) {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { data: profile } = await supabase.from('profiles').select('role, is_premium').eq('id', session.user.id).single()
-    if (!profile?.is_premium && profile?.role !== 'founder') {
+    const { data: profile } = await (supabase.from('profiles').select('role, is_premium').eq('id', session.user.id).single() as any)
+    if (!profile || (!profile.is_premium && profile.role !== 'founder')) {
         return NextResponse.json({ error: 'Only founders or Premium members can create communities' }, { status: 403 })
     }
 

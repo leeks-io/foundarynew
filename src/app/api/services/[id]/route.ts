@@ -42,8 +42,8 @@ export async function PATCH(
         const { title, description, price, delivery_time_days, revisions, category, image_url, is_active } = body
 
         // Only the freelancer who created the service can edit it
-        const { data: serviceInfo } = await supabase.from('services').select('freelancer_id').eq('id', id).single()
-        if (serviceInfo?.freelancer_id !== user.id) {
+        const { data: serviceInfo } = await (supabase.from('services').select('seller_id').eq('id', id).single() as any)
+        if (serviceInfo?.seller_id !== user.id) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
         }
 
@@ -57,8 +57,8 @@ export async function PATCH(
         if (image_url !== undefined) updates.image_url = image_url
         if (is_active !== undefined) updates.is_active = is_active
 
-        const { data, error } = await supabase
-            .from('services')
+        const { data, error } = await (supabase
+            .from('services') as any)
             .update(updates)
             .eq('id', id)
             .select()
@@ -85,8 +85,8 @@ export async function DELETE(
     }
 
     // Only the freelancer who created the service can delete it
-    const { data: serviceInfo } = await supabase.from('services').select('freelancer_id').eq('id', id).single()
-    if (serviceInfo?.freelancer_id !== user.id) {
+    const { data: serviceInfo } = await (supabase.from('services').select('seller_id').eq('id', id).single() as any)
+    if (serviceInfo?.seller_id !== user.id) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 

@@ -8,11 +8,11 @@ export async function GET(
     const { username } = await params
     const supabase = await createClient()
 
-    const { data: profile, error } = await supabase
+    const { data: profile, error } = await (supabase
         .from('profiles')
         .select('*')
         .eq('username', username)
-        .single()
+        .single() as any)
 
     if (error || !profile) {
         return NextResponse.json({ error: 'User not found' }, { status: 404 })

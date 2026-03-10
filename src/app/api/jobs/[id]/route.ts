@@ -42,7 +42,7 @@ export async function PATCH(
         const { title, description, budget, status } = body
 
         // Only the founder who created the job can edit it
-        const { data: jobInfo } = await supabase.from('jobs').select('founder_id').eq('id', id).single()
+        const { data: jobInfo } = await (supabase.from('jobs').select('founder_id').eq('id', id).single() as any)
         if (jobInfo?.founder_id !== user.id) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
         }
@@ -53,8 +53,8 @@ export async function PATCH(
         if (budget) updates.budget = budget
         if (status) updates.status = status // e.g. 'open', 'closed', 'in_progress'
 
-        const { data, error } = await supabase
-            .from('jobs')
+        const { data, error } = await (supabase
+            .from('jobs') as any)
             .update(updates)
             .eq('id', id)
             .select()
@@ -81,7 +81,7 @@ export async function DELETE(
     }
 
     // Only the founder who created the job can delete it
-    const { data: jobInfo } = await supabase.from('jobs').select('founder_id').eq('id', id).single()
+    const { data: jobInfo } = await (supabase.from('jobs').select('founder_id').eq('id', id).single() as any)
     if (jobInfo?.founder_id !== user.id) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }

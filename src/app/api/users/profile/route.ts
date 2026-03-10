@@ -7,11 +7,11 @@ export async function GET(request: Request) {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { data, error } = await supabase
+    const { data, error } = await (supabase
         .from('profiles')
         .select('*')
         .eq('id', session.user.id)
-        .single()
+        .single() as any)
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json(data)
@@ -27,8 +27,8 @@ export async function PATCH(request: Request) {
         const body = await request.json()
         const { full_name, username, bio, avatar_url, role, skills, location, website, twitter, linkedin, github } = body
 
-        const { data, error } = await supabase
-            .from('profiles')
+        const { data, error } = await (supabase
+            .from('profiles') as any)
             .update({
                 full_name,
                 username,

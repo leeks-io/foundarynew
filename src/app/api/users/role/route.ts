@@ -15,8 +15,8 @@ export async function PATCH(request: Request) {
             return NextResponse.json({ error: 'Invalid role provided' }, { status: 400 })
         }
 
-        const { data, error } = await supabase
-            .from('profiles')
+        const { data, error } = await (supabase
+            .from('profiles') as any)
             .update({ role })
             .eq('id', session.user.id)
             .select('role')

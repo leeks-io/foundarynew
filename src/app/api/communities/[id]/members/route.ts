@@ -12,27 +12,27 @@ export async function GET(
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     // Retrieve the community info to see if it's private
-    const { data: community, error: comError } = await supabase
+    const { data: community, error: comError } = await (supabase
         .from('communities')
         .select('is_private')
         .eq('id', id)
-        .single()
+        .single() as any)
 
     if (comError || !community) {
         return NextResponse.json({ error: 'Community not found' }, { status: 404 })
     }
 
-    if (community.is_private) {
+    if (community?.is_private) {
         if (authError || !user) {
             return NextResponse.json({ error: 'Unauthorized to view private community members' }, { status: 401 })
         }
 
-        const { data: membership } = await supabase
+        const { data: membership } = await (supabase
             .from('community_members')
             .select('role')
             .eq('community_id', id)
             .eq('user_id', user.id)
-            .single()
+            .single() as any)
 
         if (!membership) {
             return NextResponse.json({ error: 'Forbidden. You are not a member of this private community.' }, { status: 403 })

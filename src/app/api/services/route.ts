@@ -31,15 +31,15 @@ export async function POST(request: Request) {
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     // Role check - Only freelancers can post services
-    const { data: profile } = await supabase.from('profiles').select('role, is_premium').eq('id', session.user.id).single()
+    const { data: profile } = await (supabase.from('profiles').select('role, is_premium').eq('id', session.user.id).single() as any)
     if (profile?.role !== 'freelancer') {
         return NextResponse.json({ error: 'Only freelancers can list services' }, { status: 403 })
     }
 
     // Free tier enforcement: Max 1 active service per free tier freelancer
     if (!profile?.is_premium) {
-        const { count } = await supabase
-            .from('services')
+        const { count } = await (supabase
+            .from('services') as any)
             .select('*', { count: 'exact', head: true })
             .eq('seller_id', session.user.id)
             .eq('is_active', true)
@@ -57,8 +57,8 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
         }
 
-        const { data, error } = await supabase
-            .from('services')
+        const { data, error } = await (supabase
+            .from('services') as any)
             .insert({
                 seller_id: session.user.id,
                 title,

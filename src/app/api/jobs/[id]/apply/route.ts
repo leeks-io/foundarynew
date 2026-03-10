@@ -16,12 +16,12 @@ export async function POST(
         const { message } = body
 
         // Daily limit for free tier
-        const { data: profile } = await supabase.from('profiles').select('is_premium').eq('id', session.user.id).single()
+        const { data: profile } = await (supabase.from('profiles').select('is_premium').eq('id', session.user.id).single() as any)
 
         if (!profile?.is_premium) {
             const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-            const { count } = await supabase
-                .from('job_applications')
+            const { count } = await (supabase
+                .from('job_applications') as any)
                 .select('*', { count: 'exact', head: true })
                 .eq('applicant_id', session.user.id)
                 .gte('created_at', twentyFourHoursAgo)
@@ -29,8 +29,8 @@ export async function POST(
             if (count && count >= 2) return NextResponse.json({ error: 'Daily limit reached.' }, { status: 429 })
         }
 
-        const { data, error } = await supabase
-            .from('job_applications')
+        const { data, error } = await (supabase
+            .from('job_applications') as any)
             .insert({
                 job_id: id,
                 applicant_id: session.user.id,

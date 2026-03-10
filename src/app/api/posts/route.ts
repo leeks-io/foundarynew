@@ -29,8 +29,8 @@ export async function POST(request: Request) {
     if (!content?.trim()) return NextResponse.json({ error: 'Content is required' }, { status: 400 })
     if (content.length > 500) return NextResponse.json({ error: 'Content too long' }, { status: 400 })
 
-    const { data, error } = await supabase
-        .from('posts')
+    const { data, error } = await (supabase
+        .from('posts') as any)
         .insert({ author_id: session.user.id, content: content.trim(), image_url: image_url ?? null })
         .select('*, profiles(id, username, full_name, avatar_url, role)')
         .single()
