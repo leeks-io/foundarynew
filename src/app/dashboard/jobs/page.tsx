@@ -29,12 +29,12 @@ export default function JobsPage() {
         supabase.auth.getSession().then(({ data: { session } }) => {
             setCurrentUserId(session?.user.id ?? null)
             if (session?.user.id) {
-                supabase
-                    .from('job_applications')
+                (supabase
+                    .from('job_applications') as any)
                     .select('job_id')
                     .eq('applicant_id', session.user.id)
-                    .then(({ data }) => {
-                        setApplied(new Set(data?.map(a => a.job_id) ?? []))
+                    .then(({ data }: any) => {
+                        setApplied(new Set(data?.map((a: any) => a.job_id) ?? []))
                     })
             }
         })
@@ -42,8 +42,8 @@ export default function JobsPage() {
 
     const fetchJobs = useCallback(async () => {
         setLoading(true)
-        let query = supabase
-            .from('jobs')
+        let query = (supabase
+            .from('jobs') as any)
             .select('*, profiles(*)')
             .eq('is_active', true)
             .order('created_at', { ascending: false })
@@ -68,7 +68,7 @@ export default function JobsPage() {
     const handleApply = async (jobId: string) => {
         if (!currentUserId || applying) return
         setApplying(true)
-        await supabase.from('job_applications').insert({
+        await (supabase.from('job_applications') as any).insert({
             job_id: jobId,
             applicant_id: currentUserId,
         })
@@ -115,8 +115,8 @@ export default function JobsPage() {
                                     key={type}
                                     onClick={() => setTypeFilter(type)}
                                     className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors capitalize ${typeFilter === type
-                                            ? 'bg-white text-black'
-                                            : 'bg-zinc-800 text-zinc-400 hover:text-white'
+                                        ? 'bg-white text-black'
+                                        : 'bg-zinc-800 text-zinc-400 hover:text-white'
                                         }`}
                                 >
                                     {type === 'all' ? 'All Types' : type}
@@ -161,7 +161,7 @@ export default function JobsPage() {
                                 job={job}
                                 isApplied={applied.has(job.id)}
                                 isApplying={applying}
-                                showApply={!!currentUserId && job.poster_id !== currentUserId}
+                                showApply={!!currentUserId && job.founder_id !== currentUserId}
                                 onApply={() => handleApply(job.id)}
                                 onClick={() => setSelectedJob(job)}
                             />
@@ -176,7 +176,7 @@ export default function JobsPage() {
                     job={selectedJob}
                     isApplied={applied.has(selectedJob.id)}
                     isApplying={applying}
-                    showApply={!!currentUserId && selectedJob.poster_id !== currentUserId}
+                    showApply={!!currentUserId && selectedJob.founder_id !== currentUserId}
                     onApply={() => handleApply(selectedJob.id)}
                     onClose={() => setSelectedJob(null)}
                 />
@@ -215,9 +215,9 @@ function JobCard({
                     <p className="text-zinc-400 text-xs mt-0.5">{job.company || job.profiles?.full_name}</p>
                 </div>
                 <span className={`shrink-0 px-2 py-0.5 rounded-full text-xs font-medium capitalize ${job.type === 'full-time' ? 'bg-blue-500/20 text-blue-400' :
-                        job.type === 'contract' ? 'bg-purple-500/20 text-purple-400' :
-                            job.type === 'freelance' ? 'bg-orange-500/20 text-orange-400' :
-                                'bg-zinc-700 text-zinc-400'
+                    job.type === 'contract' ? 'bg-purple-500/20 text-purple-400' :
+                        job.type === 'freelance' ? 'bg-orange-500/20 text-orange-400' :
+                            'bg-zinc-700 text-zinc-400'
                     }`}>
                     {job.type}
                 </span>
@@ -258,8 +258,8 @@ function JobCard({
                         onClick={e => { e.stopPropagation(); onApply() }}
                         disabled={isApplied || isApplying}
                         className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${isApplied
-                                ? 'bg-zinc-700 text-zinc-500 cursor-default'
-                                : 'bg-white text-black hover:bg-zinc-200'
+                            ? 'bg-zinc-700 text-zinc-500 cursor-default'
+                            : 'bg-white text-black hover:bg-zinc-200'
                             }`}
                     >
                         {isApplied ? 'Applied' : 'Apply'}
@@ -358,8 +358,8 @@ function JobDetailModal({
                             onClick={onApply}
                             disabled={isApplied || isApplying}
                             className={`w-full py-3 rounded-xl font-medium transition-colors ${isApplied
-                                    ? 'bg-zinc-700 text-zinc-500 cursor-default'
-                                    : 'bg-white text-black hover:bg-zinc-200'
+                                ? 'bg-zinc-700 text-zinc-500 cursor-default'
+                                : 'bg-white text-black hover:bg-zinc-200'
                                 }`}
                         >
                             {isApplying ? (
@@ -399,8 +399,8 @@ function PostJobModal({
             return
         }
         setPosting(true)
-        const { error: err } = await supabase.from('jobs').insert({
-            poster_id: userId,
+        const { error: err } = await (supabase.from('jobs') as any).insert({
+            founder_id: userId,
             title: form.title,
             company: form.company || null,
             description: form.description,
