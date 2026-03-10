@@ -15,13 +15,13 @@ export async function GET(
     }
 
     // Verify user owns this job
-    const { data: jobInfo } = await supabase.from('jobs').select('poster_id').eq('id', id).single()
+    const { data: jobInfo } = await (supabase.from('jobs') as any).select('founder_id').eq('id', id).single()
 
     if (!jobInfo) {
         return NextResponse.json({ error: 'Job not found' }, { status: 404 })
     }
 
-    if (jobInfo.poster_id !== user.id) {
+    if (jobInfo.founder_id !== user.id) {
         return NextResponse.json({ error: 'Action forbidden. Only the job owner can view applications.' }, { status: 403 })
     }
 

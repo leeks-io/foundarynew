@@ -51,7 +51,7 @@ export interface Database {
             jobs: {
                 Row: {
                     id: string
-                    poster_id: string
+                    founder_id: string
                     title: string
                     description: string
                     company: string | null

@@ -31,8 +31,8 @@ export async function POST(request: Request) {
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     // Role check - Only founders can post jobs
-    const { data: profile } = await supabase.from('profiles').select('role, is_premium').eq('id', session.user.id).single()
-    if (profile?.role !== 'founder') {
+    const { data: profile } = await (supabase.from('profiles') as any).select('role, is_premium').eq('id', session.user.id).single()
+    if (!profile || (profile as any).role !== 'founder') {
         return NextResponse.json({ error: 'Only founders can post jobs' }, { status: 403 })
     }
 
@@ -44,10 +44,10 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
         }
 
-        const { data, error } = await supabase
-            .from('jobs')
+        const { data, error } = await (supabase
+            .from('jobs') as any)
             .insert({
-                poster_id: session.user.id,
+                founder_id: session.user.id,
                 title,
                 description,
                 company: company || null,

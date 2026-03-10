@@ -23,9 +23,9 @@ export async function PATCH(
         }
 
         // Get the application to find the job_id
-        const { data: appData, error: appError } = await supabase
-            .from('job_applications')
-            .select('job_id')
+        const { data: appData, error: appError } = await (supabase
+            .from('job_applications') as any)
+            .select('job_id, applicant_id, status')
             .eq('id', id)
             .single()
 
@@ -33,19 +33,19 @@ export async function PATCH(
             return NextResponse.json({ error: 'Application not found' }, { status: 404 })
         }
 
-        // Verify the user is the founder of the job
-        const { data: jobData } = await supabase
-            .from('jobs')
-            .select('poster_id')
+        // Verify the user is the owner of the job
+        const { data: jobData } = await (supabase
+            .from('jobs') as any)
+            .select('founder_id')
             .eq('id', appData.job_id)
             .single()
 
-        if (jobData?.poster_id !== user.id) {
+        if (!jobData || jobData.founder_id !== user.id) {
             return NextResponse.json({ error: 'Forbidden. You do not own this job listing.' }, { status: 403 })
         }
 
-        const { data, error } = await supabase
-            .from('job_applications')
+        const { data, error } = await (supabase
+            .from('job_applications') as any)
             .update({ status })
             .eq('id', id)
             .select()
