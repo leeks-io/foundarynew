@@ -8,13 +8,13 @@ export async function GET(request: Request) {
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     // Step 1: Get the list of user IDs that the current user is following
-    const { data: followingData } = await supabase
+    const { data: followingData } = await (supabase
         .from('connections')
         .select('recipient_id')
         .eq('requester_id', session.user.id)
-        .eq('status', 'accepted')
+        .eq('status', 'accepted') as any)
 
-    const userIds = followingData ? followingData.map(f => f.recipient_id) : []
+    const userIds = followingData ? followingData.map((f: any) => f.recipient_id) : []
     userIds.push(session.user.id)
 
     // Step 2: Fetch posts from these users with profile info

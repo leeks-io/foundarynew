@@ -40,16 +40,16 @@ export async function GET(
     }
 
     // Fetch members
-    const { data, error } = await supabase
+    const { data, error } = await (supabase
         .from('community_members')
         .select(`
             id,
             role,
             joined_at,
-            user:users(id, username, is_premium, builder_score)
+            user:profiles(id, username, is_premium, builder_score)
         `)
         .eq('community_id', id)
-        .order('joined_at', { ascending: true })
+        .order('joined_at', { ascending: true }) as any)
 
     if (error) {
         return NextResponse.json({ error: error.message }, { status: 500 })
