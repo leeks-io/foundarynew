@@ -36,8 +36,8 @@ export async function POST(request: Request) {
 
         if (!name) return NextResponse.json({ error: 'Community name is required' }, { status: 400 })
 
-        const { data: community, error } = await supabase
-            .from('communities')
+        const { data: community, error } = await (supabase
+            .from('communities') as any)
             .insert({
                 creator_id: session.user.id,
                 name,
@@ -55,7 +55,7 @@ export async function POST(request: Request) {
         }
 
         // Add creator as member
-        await supabase.from('community_members').insert({
+        await (supabase.from('community_members') as any).insert({
             community_id: community.id,
             user_id: session.user.id,
             role: 'admin'

@@ -22,8 +22,8 @@ export async function POST(
         if (comError || !community) return NextResponse.json({ error: 'Community not found' }, { status: 404 })
 
         // Insert into community members
-        const { error } = await supabase
-            .from('community_members')
+        const { error } = await (supabase
+            .from('community_members') as any)
             .insert({
                 community_id: id,
                 user_id: session.user.id,
@@ -36,9 +36,9 @@ export async function POST(
         }
 
         // Increment member count
-        const { data: countData } = await supabase.from('communities').select('member_count').eq('id', id).single()
+        const { data: countData } = await (supabase.from('communities') as any).select('member_count').eq('id', id).single()
         if (countData) {
-            await supabase.from('communities').update({ member_count: countData.member_count + 1 }).eq('id', id)
+            await (supabase.from('communities') as any).update({ member_count: (countData as any).member_count + 1 }).eq('id', id)
         }
 
         return NextResponse.json({ success: true })
